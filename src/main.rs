@@ -8,6 +8,7 @@ mod day05;
 mod day06;
 mod day07;
 mod day08;
+mod day09;
 mod input_files;
 mod intcode;
 
@@ -24,6 +25,7 @@ fn main() {
         6 => day06::execute(),
         7 => day07::execute(),
         8 => day08::execute(),
+        9 => day09::execute(),
         _ => panic!("Day {} not implemented", target_day),
     }
 }

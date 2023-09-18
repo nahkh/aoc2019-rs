@@ -8,17 +8,19 @@ enum State {
 #[derive(Debug, PartialEq, Clone)]
 pub struct IntCodeComputer {
     current_op: usize,
-    memory: Vec<i32>,
+    memory: Vec<i64>,
     state: State,
     panicked: bool,
     current_input: usize,
-    input: Vec<i32>,
-    output: Vec<i32>,
+    input: Vec<i64>,
+    output: Vec<i64>,
+    relative_base: i64,
 }
 
 pub enum Parameter {
-    Position(i32),
-    Immediate(i32),
+    Position(i64),
+    Immediate(i64),
+    Relative(i64),
 }
 
 pub enum Op {
@@ -30,13 +32,15 @@ pub enum Op {
     JumpIfFalse(Parameter, Parameter),
     LessThan(Parameter, Parameter, Parameter),
     Equals(Parameter, Parameter, Parameter),
+    AdjustRelativeBase(Parameter),
     Halt,
 }
 
-fn make_parameter(mode: i32, value: i32) -> Parameter {
+fn make_parameter(mode: i64, value: i64) -> Parameter {
     match mode {
         0 => Parameter::Position(value),
         1 => Parameter::Immediate(value),
+        2 => Parameter::Relative(value),
         _ => panic!("Unsupported mode {}", mode),
     }
 }
@@ -44,23 +48,23 @@ fn make_parameter(mode: i32, value: i32) -> Parameter {
 pub trait Runnable {
     fn interpret_op(&self) -> Op;
 
-    fn set_value(&mut self, index: usize, value: i32);
+    fn set_value(&mut self, index: usize, value: i64);
 
-    fn get_value(&mut self, index: usize) -> i32;
+    fn get_value(&self, index: usize) -> i64;
 
-    fn read_parameter(&self, parameter: &Parameter) -> i32;
+    fn read_parameter(&self, parameter: &Parameter) -> i64;
 
-    fn write_parameter(&mut self, parameter: &Parameter, value: i32);
+    fn write_parameter(&mut self, parameter: &Parameter, value: i64);
 
     fn execute_step(&mut self);
 
     fn execute_until_stopped(&mut self);
 
-    fn get_output(&self, index: usize) -> Option<i32>;
+    fn get_output(&self, index: usize) -> Option<i64>;
 
-    fn get_last_output(&self) -> Option<i32>;
+    fn get_last_output(&self) -> Option<i64>;
 
-    fn add_input(&mut self, value: i32);
+    fn add_input(&mut self, value: i64);
 
     fn has_terminated(&self) -> bool;
 }
@@ -104,30 +108,39 @@ impl Runnable for IntCodeComputer {
                 make_parameter(mode2, self.memory[self.current_op + 2]),
                 make_parameter(mode3, self.memory[self.current_op + 3]),
             ),
+            9 => Op::AdjustRelativeBase(make_parameter(mode1, self.memory[self.current_op + 1])),
             99 => Op::Halt,
             _ => panic!("Invalid opcode {}", opcode),
         }
     }
 
-    fn set_value(&mut self, index: usize, value: i32) {
+    fn set_value(&mut self, index: usize, value: i64) {
+        while index >= self.memory.len() {
+            self.memory.push(0);
+        }
         self.memory[index] = value;
     }
 
-    fn get_value(&mut self, index: usize) -> i32 {
+    fn get_value(&self, index: usize) -> i64 {
+        if index >= self.memory.len() {
+            return 0;
+        }
         self.memory[index]
     }
 
-    fn read_parameter(&self, parameter: &Parameter) -> i32 {
+    fn read_parameter(&self, parameter: &Parameter) -> i64 {
         match parameter {
             Parameter::Immediate(x) => *x,
-            Parameter::Position(x) => self.memory[*x as usize],
+            Parameter::Position(x) => self.get_value(*x as usize),
+            Parameter::Relative(x) => self.get_value((*x + self.relative_base) as usize),
         }
     }
 
-    fn write_parameter(&mut self, parameter: &Parameter, value: i32) {
+    fn write_parameter(&mut self, parameter: &Parameter, value: i64) {
         match parameter {
             Parameter::Immediate(_) => panic!("Cannot write to an immediate parameter!"),
-            Parameter::Position(x) => self.memory[*x as usize] = value,
+            Parameter::Position(x) => self.set_value(*x as usize, value),
+            Parameter::Relative(x) => self.set_value((*x + self.relative_base) as usize, value),
         };
     }
 
@@ -187,6 +200,11 @@ impl Runnable for IntCodeComputer {
                 }
                 self.current_op += 4;
             }
+            Op::AdjustRelativeBase(o) => {
+                let offset = self.read_parameter(&o);
+                self.relative_base += offset;
+                self.current_op += 2;
+            }
             Op::Halt => {
                 self.state = State::Halted;
             }
@@ -199,7 +217,7 @@ impl Runnable for IntCodeComputer {
         }
     }
 
-    fn get_output(&self, index: usize) -> Option<i32> {
+    fn get_output(&self, index: usize) -> Option<i64> {
         if index < self.output.len() {
             Some(self.output[index])
         } else {
@@ -207,7 +225,7 @@ impl Runnable for IntCodeComputer {
         }
     }
 
-    fn get_last_output(&self) -> Option<i32> {
+    fn get_last_output(&self) -> Option<i64> {
         if self.output.len() > 0 {
             Some(self.output[self.output.len() - 1])
         } else {
@@ -215,7 +233,7 @@ impl Runnable for IntCodeComputer {
         }
     }
 
-    fn add_input(&mut self, value: i32) {
+    fn add_input(&mut self, value: i64) {
         self.input.push(value);
         if self.state == State::Waiting {
             self.state = State::Running;
@@ -237,17 +255,18 @@ pub fn read_program(content: String) -> IntCodeComputer {
         current_input: 0,
         input: Vec::new(),
         output: Vec::new(),
+        relative_base: 0,
     };
     let mut i = 0;
     for line in content.split(",") {
-        let value = line.trim().parse::<i32>().unwrap();
+        let value = line.trim().parse::<i64>().unwrap();
         m.memory[i] = value;
         i += 1;
     }
     return m;
 }
 
-pub fn read_program_with_input(content: String, value: i32) -> IntCodeComputer {
+pub fn read_program_with_input(content: String, value: i64) -> IntCodeComputer {
     let mut m = read_program(content);
     m.add_input(value);
     m
@@ -382,5 +401,20 @@ mod tests {
         m3.execute_until_stopped();
         assert_eq!(m3.output.len(), 1);
         assert_eq!(m3.output[0], 1001);
+    }
+
+    #[test]
+    fn test_relative_mode() {
+        let mut m1 = crate::intcode::read_program(String::from("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99"));
+        m1.execute_until_stopped();
+        assert_eq!(m1.output, vec![109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]);
+        let mut m2 = crate::intcode::read_program(String::from("1102,34915192,34915192,7,4,7,99,0"));
+        m2.execute_until_stopped();
+        assert_eq!(m2.output.len(), 1);
+        assert_eq!(m2.output[0], 1219070632396864);
+        let mut m3 = crate::intcode::read_program(String::from("104,1125899906842624,99"));
+        m3.execute_until_stopped();
+        assert_eq!(m3.output.len(), 1);
+        assert_eq!(m3.output[0], 1125899906842624);
     }
 }

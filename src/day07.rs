@@ -3,7 +3,7 @@ use crate::intcode::IntCodeComputer;
 use crate::intcode::Runnable;
 use itertools::Itertools; // 0.8.2
 
-fn evaluate_combination(content: String, phases: Vec<&i32>) -> i32 {
+fn evaluate_combination(content: String, phases: Vec<&i64>) -> i64 {
     let mut output = 0;
     for phase in phases.iter() {
         let mut m = read_program(content.clone());
@@ -16,8 +16,8 @@ fn evaluate_combination(content: String, phases: Vec<&i32>) -> i32 {
     output
 }
 
-fn find_best_combination(content: String) -> i32 {
-    let items: Vec<i32> = vec![0, 1, 2, 3, 4];
+fn find_best_combination(content: String) -> i64 {
+    let items: Vec<i64> = vec![0, 1, 2, 3, 4];
     let mut current_best = 0;
     for perm in items.iter().permutations(items.len()) {
         let value = evaluate_combination(content.clone(), perm);
@@ -29,7 +29,7 @@ fn find_best_combination(content: String) -> i32 {
     current_best
 }
 
-fn evalute_combination_recursively(content: String, phases: Vec<&i32>) -> i32 {
+fn evalute_combination_recursively(content: String, phases: Vec<&i64>) -> i64 {
     let mut machines: Vec<IntCodeComputer> = Vec::new();
     for phase in phases.iter() {
         let mut m = read_program(content.clone());
@@ -50,8 +50,8 @@ fn evalute_combination_recursively(content: String, phases: Vec<&i32>) -> i32 {
     current_value
 }
 
-fn find_best_combination_recursively(content: String) -> i32 {
-    let items: Vec<i32> = vec![5, 6, 7, 8, 9];
+fn find_best_combination_recursively(content: String) -> i64 {
+    let items: Vec<i64> = vec![5, 6, 7, 8, 9];
     let mut current_best = 0;
     for perm in items.iter().permutations(items.len()) {
         let value = evalute_combination_recursively(content.clone(), perm);
