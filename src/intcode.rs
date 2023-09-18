@@ -72,36 +72,40 @@ impl Runnable for IntCodeComputer {
         let mode1 = (instruction / 100) % 10;
         let mode2 = (instruction / 1000) % 10;
         let mode3 = (instruction / 10000) % 10;
-        
+
         match opcode {
             1 => Op::Add(
                 make_parameter(mode1, self.memory[self.current_op + 1]),
                 make_parameter(mode2, self.memory[self.current_op + 2]),
-                make_parameter(mode3, self.memory[self.current_op + 3])),
+                make_parameter(mode3, self.memory[self.current_op + 3]),
+            ),
             2 => Op::Multiply(
                 make_parameter(mode1, self.memory[self.current_op + 1]),
                 make_parameter(mode2, self.memory[self.current_op + 2]),
-                make_parameter(mode3, self.memory[self.current_op + 3])),
-            3 => Op::Input(
-                make_parameter(mode1, self.memory[self.current_op + 1])),
-            4 => Op::Output(
-                make_parameter(mode1, self.memory[self.current_op + 1])),
+                make_parameter(mode3, self.memory[self.current_op + 3]),
+            ),
+            3 => Op::Input(make_parameter(mode1, self.memory[self.current_op + 1])),
+            4 => Op::Output(make_parameter(mode1, self.memory[self.current_op + 1])),
             5 => Op::JumpIfTrue(
                 make_parameter(mode1, self.memory[self.current_op + 1]),
-                make_parameter(mode2, self.memory[self.current_op + 2])),
+                make_parameter(mode2, self.memory[self.current_op + 2]),
+            ),
             6 => Op::JumpIfFalse(
                 make_parameter(mode1, self.memory[self.current_op + 1]),
-                make_parameter(mode2, self.memory[self.current_op + 2])),
+                make_parameter(mode2, self.memory[self.current_op + 2]),
+            ),
             7 => Op::LessThan(
                 make_parameter(mode1, self.memory[self.current_op + 1]),
                 make_parameter(mode2, self.memory[self.current_op + 2]),
-                make_parameter(mode3, self.memory[self.current_op + 3])),
+                make_parameter(mode3, self.memory[self.current_op + 3]),
+            ),
             8 => Op::Equals(
                 make_parameter(mode1, self.memory[self.current_op + 1]),
                 make_parameter(mode2, self.memory[self.current_op + 2]),
-                make_parameter(mode3, self.memory[self.current_op + 3])),
+                make_parameter(mode3, self.memory[self.current_op + 3]),
+            ),
             99 => Op::Halt,
-            _ => panic!("Invalid opcode {}", opcode)
+            _ => panic!("Invalid opcode {}", opcode),
         }
     }
 
@@ -127,7 +131,6 @@ impl Runnable for IntCodeComputer {
         };
     }
 
-
     fn execute_step(&mut self) {
         if self.state != State::Running {
             return;
@@ -136,11 +139,11 @@ impl Runnable for IntCodeComputer {
             Op::Add(l, r, o) => {
                 self.write_parameter(&o, self.read_parameter(&l) + self.read_parameter(&r));
                 self.current_op += 4;
-            },
+            }
             Op::Multiply(l, r, o) => {
                 self.write_parameter(&o, self.read_parameter(&l) * self.read_parameter(&r));
                 self.current_op += 4;
-            },
+            }
             Op::Input(o) => {
                 if self.current_input < self.input.len() {
                     self.write_parameter(&o, self.input[self.current_input]);
@@ -149,25 +152,25 @@ impl Runnable for IntCodeComputer {
                 } else {
                     self.state = State::Waiting;
                 }
-            },
+            }
             Op::Output(o) => {
                 self.output.push(self.read_parameter(&o));
                 self.current_op += 2;
-            },
+            }
             Op::JumpIfTrue(t, new_op) => {
                 if self.read_parameter(&t) != 0 {
                     self.current_op = self.read_parameter(&new_op) as usize;
                 } else {
                     self.current_op += 3;
                 }
-            },
+            }
             Op::JumpIfFalse(t, new_op) => {
                 if self.read_parameter(&t) == 0 {
                     self.current_op = self.read_parameter(&new_op) as usize;
                 } else {
                     self.current_op += 3;
                 }
-            },
+            }
             Op::LessThan(l, r, o) => {
                 if self.read_parameter(&l) < self.read_parameter(&r) {
                     self.write_parameter(&o, 1);
@@ -175,7 +178,7 @@ impl Runnable for IntCodeComputer {
                     self.write_parameter(&o, 0);
                 }
                 self.current_op += 4;
-            },
+            }
             Op::Equals(l, r, o) => {
                 if self.read_parameter(&l) == self.read_parameter(&r) {
                     self.write_parameter(&o, 1);
@@ -183,10 +186,10 @@ impl Runnable for IntCodeComputer {
                     self.write_parameter(&o, 0);
                 }
                 self.current_op += 4;
-            },
+            }
             Op::Halt => {
                 self.state = State::Halted;
-            },
+            }
         };
     }
 
@@ -226,8 +229,7 @@ impl Runnable for IntCodeComputer {
 
 pub fn read_program(content: String) -> IntCodeComputer {
     let c = content.matches(",").count() + 1;
-    let mut m = IntCodeComputer
- {
+    let mut m = IntCodeComputer {
         current_op: 0,
         memory: vec![0; c],
         state: State::Running,
@@ -259,7 +261,8 @@ mod tests {
     fn test_simple_program() {
         let mut m = crate::intcode::read_program(String::from("1,9,10,3,2,3,11,0,99,30,40,50"));
         m.execute_until_stopped();
-        let mut expected = crate::intcode::read_program(String::from("3500,9,10,70,2,3,11,0,99,30,40,50"));
+        let mut expected =
+            crate::intcode::read_program(String::from("3500,9,10,70,2,3,11,0,99,30,40,50"));
         expected.current_op = 8;
         expected.state = crate::intcode::State::Halted;
         assert_eq!(m, expected);
@@ -275,11 +278,13 @@ mod tests {
 
     #[test]
     fn test_eq_positional() {
-        let mut m1 = crate::intcode::read_program_with_input(String::from("3,9,8,9,10,9,4,9,99,-1,8"), 8);
+        let mut m1 =
+            crate::intcode::read_program_with_input(String::from("3,9,8,9,10,9,4,9,99,-1,8"), 8);
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
-        let mut m2 = crate::intcode::read_program_with_input(String::from("3,9,8,9,10,9,4,9,99,-1,8"), 9);
+        let mut m2 =
+            crate::intcode::read_program_with_input(String::from("3,9,8,9,10,9,4,9,99,-1,8"), 9);
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);
@@ -287,11 +292,13 @@ mod tests {
 
     #[test]
     fn test_lt_positional() {
-        let mut m1 = crate::intcode::read_program_with_input(String::from("3,9,7,9,10,9,4,9,99,-1,8"), 7);
+        let mut m1 =
+            crate::intcode::read_program_with_input(String::from("3,9,7,9,10,9,4,9,99,-1,8"), 7);
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
-        let mut m2 = crate::intcode::read_program_with_input(String::from("3,9,7,9,10,9,4,9,99,-1,8"), 9);
+        let mut m2 =
+            crate::intcode::read_program_with_input(String::from("3,9,7,9,10,9,4,9,99,-1,8"), 9);
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);
@@ -299,11 +306,13 @@ mod tests {
 
     #[test]
     fn test_eq_immediate() {
-        let mut m1 = crate::intcode::read_program_with_input(String::from("3,3,1108,-1,8,3,4,3,99"), 8);
+        let mut m1 =
+            crate::intcode::read_program_with_input(String::from("3,3,1108,-1,8,3,4,3,99"), 8);
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
-        let mut m2 = crate::intcode::read_program_with_input(String::from("3,3,1108,-1,8,3,4,3,99"), 9);
+        let mut m2 =
+            crate::intcode::read_program_with_input(String::from("3,3,1108,-1,8,3,4,3,99"), 9);
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);
@@ -311,11 +320,13 @@ mod tests {
 
     #[test]
     fn test_lt_immediate() {
-        let mut m1 = crate::intcode::read_program_with_input(String::from("3,3,1107,-1,8,3,4,3,99"), 7);
+        let mut m1 =
+            crate::intcode::read_program_with_input(String::from("3,3,1107,-1,8,3,4,3,99"), 7);
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
-        let mut m2 = crate::intcode::read_program_with_input(String::from("3,3,1107,-1,8,3,4,3,99"), 9);
+        let mut m2 =
+            crate::intcode::read_program_with_input(String::from("3,3,1107,-1,8,3,4,3,99"), 9);
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);
@@ -323,11 +334,17 @@ mod tests {
 
     #[test]
     fn test_jump_positional() {
-        let mut m1 = crate::intcode::read_program_with_input(String::from("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"), 7);
+        let mut m1 = crate::intcode::read_program_with_input(
+            String::from("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"),
+            7,
+        );
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
-        let mut m2 = crate::intcode::read_program_with_input(String::from("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"), 0);
+        let mut m2 = crate::intcode::read_program_with_input(
+            String::from("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"),
+            0,
+        );
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);
@@ -335,11 +352,17 @@ mod tests {
 
     #[test]
     fn test_jump_immediate() {
-        let mut m1 = crate::intcode::read_program_with_input(String::from("3,3,1105,-1,9,1101,0,0,12,4,12,99,1"), 7);
+        let mut m1 = crate::intcode::read_program_with_input(
+            String::from("3,3,1105,-1,9,1101,0,0,12,4,12,99,1"),
+            7,
+        );
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
-        let mut m2 = crate::intcode::read_program_with_input(String::from("3,3,1105,-1,9,1101,0,0,12,4,12,99,1"), 0);
+        let mut m2 = crate::intcode::read_program_with_input(
+            String::from("3,3,1105,-1,9,1101,0,0,12,4,12,99,1"),
+            0,
+        );
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);

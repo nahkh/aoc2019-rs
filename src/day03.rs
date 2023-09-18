@@ -1,9 +1,9 @@
-use std::result::Result;
-use std::option::Option;
+use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Add;
-use std::cmp::min;
+use std::option::Option;
+use std::result::Result;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 struct Position {
@@ -15,10 +15,10 @@ impl Add for Position {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-            Self {
-                x: self.x + other.x,
-                y: self.y + other.y
-            }
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
     }
 }
 
@@ -55,10 +55,10 @@ trait InstructionConsumer {
 impl InstructionConsumer for FuelManagementSystem {
     fn apply(&mut self, instruction: Instruction) {
         let (offset, distance) = match instruction {
-            Instruction::LEFT(x) => (Position {x: -1, y: 0}, x),
-            Instruction::RIGHT(x) => (Position {x: 1, y: 0}, x),
-            Instruction::UP(x) => (Position {x: 0, y: -1}, x),
-            Instruction::DOWN(x) => (Position {x: 0, y: 1}, x),
+            Instruction::LEFT(x) => (Position { x: -1, y: 0 }, x),
+            Instruction::RIGHT(x) => (Position { x: 1, y: 0 }, x),
+            Instruction::UP(x) => (Position { x: 0, y: -1 }, x),
+            Instruction::DOWN(x) => (Position { x: 0, y: 1 }, x),
         };
         // println!("From {:?} <- {:?} x {}", self.current_position, offset, distance);
         for _i in 0..distance {
@@ -66,7 +66,8 @@ impl InstructionConsumer for FuelManagementSystem {
             self.current_position = self.current_position + offset;
             self.current_length += 1;
             self.known_wires.insert(self.current_position);
-            self.known_lengths.insert(self.current_position, self.current_length);
+            self.known_lengths
+                .insert(self.current_position, self.current_length);
         }
         // println!("reached {:?}", self.current_position);
     }
@@ -79,7 +80,7 @@ fn parse_instruction(content: String) -> Result<Instruction, &'static str> {
     if distance_result.is_err() {
         return Err("Invalid distance");
     }
-    
+
     let distance = distance_result.unwrap();
     match &content[0..1] {
         "R" => Ok(Instruction::RIGHT(distance)),
@@ -105,15 +106,15 @@ fn parse_instructions(content: String) -> Vec<Instruction> {
 fn find_nearest_crossing(first_wire: String, second_wire: String) -> Option<i32> {
     let instructions1 = parse_instructions(first_wire);
     let instructions2 = parse_instructions(second_wire);
-    let origin = Position {x: 0, y: 0};
-    let mut fms1 = FuelManagementSystem { 
-        current_position: origin, 
+    let origin = Position { x: 0, y: 0 };
+    let mut fms1 = FuelManagementSystem {
+        current_position: origin,
         current_length: 0,
         known_wires: HashSet::new(),
         known_lengths: HashMap::new(),
     };
-    let mut fms2 = FuelManagementSystem { 
-        current_position: origin, 
+    let mut fms2 = FuelManagementSystem {
+        current_position: origin,
         current_length: 0,
         known_wires: HashSet::new(),
         known_lengths: HashMap::new(),
@@ -137,15 +138,15 @@ fn find_nearest_crossing(first_wire: String, second_wire: String) -> Option<i32>
 fn find_shortest_crossing(first_wire: String, second_wire: String) -> Option<i32> {
     let instructions1 = parse_instructions(first_wire);
     let instructions2 = parse_instructions(second_wire);
-    let origin = Position {x: 0, y: 0};
-    let mut fms1 = FuelManagementSystem { 
-        current_position: origin, 
+    let origin = Position { x: 0, y: 0 };
+    let mut fms1 = FuelManagementSystem {
+        current_position: origin,
         current_length: 0,
         known_wires: HashSet::new(),
         known_lengths: HashMap::new(),
     };
-    let mut fms2 = FuelManagementSystem { 
-        current_position: origin, 
+    let mut fms2 = FuelManagementSystem {
+        current_position: origin,
         current_length: 0,
         known_wires: HashSet::new(),
         known_lengths: HashMap::new(),
@@ -160,7 +161,10 @@ fn find_shortest_crossing(first_wire: String, second_wire: String) -> Option<i32
     for crossing in fms1.known_wires.intersection(&fms2.known_wires) {
         smallest_distance = match smallest_distance {
             None => Some(fms1.known_lengths[crossing] + fms2.known_lengths[crossing]),
-            Some(x) => Some(min(x, fms1.known_lengths[crossing] + fms2.known_lengths[crossing])),
+            Some(x) => Some(min(
+                x,
+                fms1.known_lengths[crossing] + fms2.known_lengths[crossing],
+            )),
         }
     }
     return smallest_distance;
@@ -170,25 +174,29 @@ pub fn execute() {
     let content = crate::input_files::read_content(&String::from("data/day03.txt"));
     let lines: Vec<&str> = content.lines().collect();
     let nearest_crossing = find_nearest_crossing(lines[0].to_string(), lines[1].to_string());
-    println!("Part 1: Nearest crossing at {}", nearest_crossing.unwrap_or(-1));
+    println!(
+        "Part 1: Nearest crossing at {}",
+        nearest_crossing.unwrap_or(-1)
+    );
     let shortest_crossing = find_shortest_crossing(lines[0].to_string(), lines[1].to_string());
-    println!("Part 2: Shortest crossing at {}", shortest_crossing.unwrap_or(-1));
+    println!(
+        "Part 2: Shortest crossing at {}",
+        shortest_crossing.unwrap_or(-1)
+    );
 }
-
-
 
 #[cfg(test)]
 mod tests {
-    use crate::day03::Instruction;
-    use crate::day03::parse_instruction;
-    use crate::day03::parse_instructions;
     use crate::day03::find_nearest_crossing;
     use crate::day03::find_shortest_crossing;
-    use crate::day03::Position;
+    use crate::day03::parse_instruction;
+    use crate::day03::parse_instructions;
     use crate::day03::FuelManagementSystem;
-    use crate::day03::HashSet;
     use crate::day03::HashMap;
+    use crate::day03::HashSet;
+    use crate::day03::Instruction;
     use crate::day03::InstructionConsumer;
+    use crate::day03::Position;
 
     #[test]
     fn test_parsing() {
@@ -214,43 +222,63 @@ mod tests {
 
     #[test]
     fn test_instruction() {
-        let origin = Position {x: 0, y: 0};
-        let mut fms = FuelManagementSystem { 
-            current_position: origin, 
+        let origin = Position { x: 0, y: 0 };
+        let mut fms = FuelManagementSystem {
+            current_position: origin,
             current_length: 0,
             known_wires: HashSet::new(),
             known_lengths: HashMap::new(),
         };
         fms.apply(Instruction::LEFT(1));
-        assert_eq!(fms.current_position, Position {x: -1, y: 0});
-        assert_eq!(fms.known_wires, HashSet::from([Position {x: -1, y: 0}]));
+        assert_eq!(fms.current_position, Position { x: -1, y: 0 });
+        assert_eq!(fms.known_wires, HashSet::from([Position { x: -1, y: 0 }]));
         fms.apply(Instruction::UP(2));
-        assert_eq!(fms.current_position, Position {x: -1, y: -2});
-        assert_eq!(fms.known_wires, HashSet::from([
-            Position {x: -1, y: 0},
-            Position {x: -1, y: -1},
-            Position {x: -1, y: -2}
-        ]));
-        
+        assert_eq!(fms.current_position, Position { x: -1, y: -2 });
+        assert_eq!(
+            fms.known_wires,
+            HashSet::from([
+                Position { x: -1, y: 0 },
+                Position { x: -1, y: -1 },
+                Position { x: -1, y: -2 }
+            ])
+        );
     }
 
     #[test]
     fn test_nearest_crossing_execution() {
-        let distance1 = find_nearest_crossing("R8,U5,L5,D3".to_string(), "U7,R6,D4,L4".to_string()).unwrap();
+        let distance1 =
+            find_nearest_crossing("R8,U5,L5,D3".to_string(), "U7,R6,D4,L4".to_string()).unwrap();
         assert_eq!(distance1, 6);
-        let distance2 = find_nearest_crossing("R75,D30,R83,U83,L12,D49,R71,U7,L72".to_string(), "U62,R66,U55,R34,D71,R55,D58,R83".to_string()).unwrap();
+        let distance2 = find_nearest_crossing(
+            "R75,D30,R83,U83,L12,D49,R71,U7,L72".to_string(),
+            "U62,R66,U55,R34,D71,R55,D58,R83".to_string(),
+        )
+        .unwrap();
         assert_eq!(distance2, 159);
-        let distance3 = find_nearest_crossing("R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51".to_string(), "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7".to_string()).unwrap();
+        let distance3 = find_nearest_crossing(
+            "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51".to_string(),
+            "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7".to_string(),
+        )
+        .unwrap();
         assert_eq!(distance3, 135);
     }
 
     #[test]
     fn test_shortest_crossing_execution() {
-        let distance1 = find_shortest_crossing("R8,U5,L5,D3".to_string(), "U7,R6,D4,L4".to_string()).unwrap();
+        let distance1 =
+            find_shortest_crossing("R8,U5,L5,D3".to_string(), "U7,R6,D4,L4".to_string()).unwrap();
         assert_eq!(distance1, 30);
-        let distance2 = find_shortest_crossing("R75,D30,R83,U83,L12,D49,R71,U7,L72".to_string(), "U62,R66,U55,R34,D71,R55,D58,R83".to_string()).unwrap();
+        let distance2 = find_shortest_crossing(
+            "R75,D30,R83,U83,L12,D49,R71,U7,L72".to_string(),
+            "U62,R66,U55,R34,D71,R55,D58,R83".to_string(),
+        )
+        .unwrap();
         assert_eq!(distance2, 610);
-        let distance3 = find_shortest_crossing("R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51".to_string(), "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7".to_string()).unwrap();
+        let distance3 = find_shortest_crossing(
+            "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51".to_string(),
+            "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7".to_string(),
+        )
+        .unwrap();
         assert_eq!(distance3, 410);
     }
 }

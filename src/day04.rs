@@ -39,13 +39,13 @@ fn number_is_valid_part2(number: i32) -> bool {
         }
         prev_number = num;
     }
-    
+
     current_streak == 2
 }
 
 fn count_valid_passwords_part1(start: i32, end: i32) -> i32 {
     let mut count = 0;
-    for num in start..(end+1) {
+    for num in start..(end + 1) {
         if number_is_valid_part1(num) {
             count += 1;
         }
@@ -55,7 +55,7 @@ fn count_valid_passwords_part1(start: i32, end: i32) -> i32 {
 
 fn count_valid_passwords_part2(start: i32, end: i32) -> i32 {
     let mut count = 0;
-    for num in start..(end+1) {
+    for num in start..(end + 1) {
         if number_is_valid_part2(num) {
             count += 1;
         }

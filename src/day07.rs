@@ -1,7 +1,7 @@
-use itertools::Itertools; // 0.8.2
-use crate::intcode::Runnable;
 use crate::intcode::read_program;
 use crate::intcode::IntCodeComputer;
+use crate::intcode::Runnable;
+use itertools::Itertools; // 0.8.2
 
 fn evaluate_combination(content: String, phases: Vec<&i32>) -> i32 {
     let mut output = 0;
@@ -14,7 +14,7 @@ fn evaluate_combination(content: String, phases: Vec<&i32>) -> i32 {
     }
 
     output
-} 
+}
 
 fn find_best_combination(content: String) -> i32 {
     let items: Vec<i32> = vec![0, 1, 2, 3, 4];
@@ -46,10 +46,9 @@ fn evalute_combination_recursively(content: String, phases: Vec<&i32>) -> i32 {
             still_running = still_running && !m.has_terminated();
         }
     }
-    
+
     current_value
 }
-
 
 fn find_best_combination_recursively(content: String) -> i32 {
     let items: Vec<i32> = vec![5, 6, 7, 8, 9];
@@ -69,21 +68,29 @@ pub fn execute() {
     let best_combination = find_best_combination(content.clone());
     println!("Part 1: Best combination {}", best_combination);
     let best_recursive_combination = find_best_combination_recursively(content.clone());
-    println!("Part 2: Best recursive combination {}", best_recursive_combination);
+    println!(
+        "Part 2: Best recursive combination {}",
+        best_recursive_combination
+    );
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn evalute_known_pattern() {
-        let content = "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5".to_string();
-        let value = crate::day07::evalute_combination_recursively(content, vec![&9,&8,&7,&6,&5]);
+        let content =
+            "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5"
+                .to_string();
+        let value =
+            crate::day07::evalute_combination_recursively(content, vec![&9, &8, &7, &6, &5]);
         assert_eq!(value, 139629729);
     }
 
     #[test]
     fn find_best_pattern() {
-        let content = "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5".to_string();
+        let content =
+            "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5"
+                .to_string();
         let value = crate::day07::find_best_combination_recursively(content);
         assert_eq!(value, 139629729);
     }

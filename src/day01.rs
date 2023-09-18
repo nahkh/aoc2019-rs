@@ -15,7 +15,6 @@ pub fn execute() {
     println!("Total fuel needed: {}", total_fuel);
 }
 
-
 #[cfg(test)]
 mod tests {
     #[test]
