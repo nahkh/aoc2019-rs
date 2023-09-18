@@ -1,8 +1,15 @@
 #[derive(Debug, PartialEq, Clone)]
+enum State {
+    Running,
+    Waiting,
+    Halted,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct IntCodeComputer {
     current_op: usize,
     memory: Vec<i32>,
-    running: bool,
+    state: State,
     panicked: bool,
     current_input: usize,
     input: Vec<i32>,
@@ -54,6 +61,8 @@ pub trait Runnable {
     fn get_last_output(&self) -> Option<i32>;
 
     fn add_input(&mut self, value: i32);
+
+    fn has_terminated(&self) -> bool;
 }
 
 impl Runnable for IntCodeComputer {
@@ -120,7 +129,7 @@ impl Runnable for IntCodeComputer {
 
 
     fn execute_step(&mut self) {
-        if !self.running{
+        if self.state != State::Running {
             return;
         }
         match self.interpret_op() {
@@ -133,9 +142,13 @@ impl Runnable for IntCodeComputer {
                 self.current_op += 4;
             },
             Op::Input(o) => {
-                self.write_parameter(&o, self.input[self.current_input]);
-                self.current_op += 2;
-                self.current_input += 1;
+                if self.current_input < self.input.len() {
+                    self.write_parameter(&o, self.input[self.current_input]);
+                    self.current_op += 2;
+                    self.current_input += 1;
+                } else {
+                    self.state = State::Waiting;
+                }
             },
             Op::Output(o) => {
                 self.output.push(self.read_parameter(&o));
@@ -172,13 +185,13 @@ impl Runnable for IntCodeComputer {
                 self.current_op += 4;
             },
             Op::Halt => {
-                self.running = false;
+                self.state = State::Halted;
             },
         };
     }
 
     fn execute_until_stopped(&mut self) {
-        while self.running {
+        while self.state == State::Running {
             self.execute_step();
         }
     }
@@ -201,6 +214,13 @@ impl Runnable for IntCodeComputer {
 
     fn add_input(&mut self, value: i32) {
         self.input.push(value);
+        if self.state == State::Waiting {
+            self.state = State::Running;
+        }
+    }
+
+    fn has_terminated(&self) -> bool {
+        self.state == State::Halted
     }
 }
 
@@ -210,7 +230,7 @@ pub fn read_program(content: String) -> IntCodeComputer {
  {
         current_op: 0,
         memory: vec![0; c],
-        running: true,
+        state: State::Running,
         panicked: false,
         current_input: 0,
         input: Vec::new(),
@@ -241,7 +261,7 @@ mod tests {
         m.execute_until_stopped();
         let mut expected = crate::intcode::read_program(String::from("3500,9,10,70,2,3,11,0,99,30,40,50"));
         expected.current_op = 8;
-        expected.running = false;
+        expected.state = crate::intcode::State::Halted;
         assert_eq!(m, expected);
     }
 
