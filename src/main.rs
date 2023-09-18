@@ -1,7 +1,5 @@
 use std::env;
 
-mod input_files;
-mod intcode;
 mod day01;
 mod day02;
 mod day03;
@@ -9,6 +7,9 @@ mod day04;
 mod day05;
 mod day06;
 mod day07;
+mod day08;
+mod input_files;
+mod intcode;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -22,6 +23,7 @@ fn main() {
         5 => day05::execute(),
         6 => day06::execute(),
         7 => day07::execute(),
-        _ => panic!("Day {} not implemented", target_day)
+        8 => day08::execute(),
+        _ => panic!("Day {} not implemented", target_day),
     }
 }
