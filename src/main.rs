@@ -12,11 +12,9 @@ mod day09;
 mod input_files;
 mod intcode;
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    let day_arg = &args[1];
-    let target_day = day_arg.parse::<usize>().unwrap();
-    match target_day {
+fn execute_day(day: usize) {
+    println!("Day {}", day);
+    match day {
         1 => day01::execute(),
         2 => day02::execute(),
         3 => day03::execute(),
@@ -26,6 +24,22 @@ fn main() {
         7 => day07::execute(),
         8 => day08::execute(),
         9 => day09::execute(),
-        _ => panic!("Day {} not implemented", target_day),
+        _ => panic!("Day {} not implemented", day),
     }
+    println!("");
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 2 {
+        for i in 1..10 {
+            execute_day(i);
+        }
+    } else {
+        let day_arg = &args[1];
+        let target_day = day_arg.parse::<usize>().unwrap();
+        execute_day(target_day);
+    }
+    
 }

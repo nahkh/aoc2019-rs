@@ -67,7 +67,7 @@ pub fn execute() {
     let count1 = count_valid_passwords_part1(108457, 562041);
     println!("Part 1: Number of valid passwords in range: {}", count1);
     let count2 = count_valid_passwords_part2(108457, 562041);
-    println!("Part 1: Number of valid passwords in range: {}", count2);
+    println!("Part 2: Number of valid passwords in range: {}", count2);
 }
 
 #[cfg(test)]
