@@ -36,40 +36,18 @@ pub enum Op {
     Halt,
 }
 
-fn make_parameter(mode: i64, value: i64) -> Parameter {
-    match mode {
-        0 => Parameter::Position(value),
-        1 => Parameter::Immediate(value),
-        2 => Parameter::Relative(value),
-        _ => panic!("Unsupported mode {}", mode),
+impl Parameter {
+    fn from(mode: i64, value: i64) -> Parameter {
+        match mode {
+            0 => Parameter::Position(value),
+            1 => Parameter::Immediate(value),
+            2 => Parameter::Relative(value),
+            _ => panic!("Unsupported mode {}", mode),
+        }
     }
 }
 
-pub trait Runnable {
-    fn interpret_op(&self) -> Op;
-
-    fn set_value(&mut self, index: usize, value: i64);
-
-    fn get_value(&self, index: usize) -> i64;
-
-    fn read_parameter(&self, parameter: &Parameter) -> i64;
-
-    fn write_parameter(&mut self, parameter: &Parameter, value: i64);
-
-    fn execute_step(&mut self);
-
-    fn execute_until_stopped(&mut self);
-
-    fn get_output(&self, index: usize) -> Option<i64>;
-
-    fn get_last_output(&self) -> Option<i64>;
-
-    fn add_input(&mut self, value: i64);
-
-    fn has_terminated(&self) -> bool;
-}
-
-impl Runnable for IntCodeComputer {
+impl IntCodeComputer {
     fn interpret_op(&self) -> Op {
         let instruction = self.memory[self.current_op];
         let opcode = instruction % 100;
@@ -79,49 +57,49 @@ impl Runnable for IntCodeComputer {
 
         match opcode {
             1 => Op::Add(
-                make_parameter(mode1, self.memory[self.current_op + 1]),
-                make_parameter(mode2, self.memory[self.current_op + 2]),
-                make_parameter(mode3, self.memory[self.current_op + 3]),
+                Parameter::from(mode1, self.memory[self.current_op + 1]),
+                Parameter::from(mode2, self.memory[self.current_op + 2]),
+                Parameter::from(mode3, self.memory[self.current_op + 3]),
             ),
             2 => Op::Multiply(
-                make_parameter(mode1, self.memory[self.current_op + 1]),
-                make_parameter(mode2, self.memory[self.current_op + 2]),
-                make_parameter(mode3, self.memory[self.current_op + 3]),
+                Parameter::from(mode1, self.memory[self.current_op + 1]),
+                Parameter::from(mode2, self.memory[self.current_op + 2]),
+                Parameter::from(mode3, self.memory[self.current_op + 3]),
             ),
-            3 => Op::Input(make_parameter(mode1, self.memory[self.current_op + 1])),
-            4 => Op::Output(make_parameter(mode1, self.memory[self.current_op + 1])),
+            3 => Op::Input(Parameter::from(mode1, self.memory[self.current_op + 1])),
+            4 => Op::Output(Parameter::from(mode1, self.memory[self.current_op + 1])),
             5 => Op::JumpIfTrue(
-                make_parameter(mode1, self.memory[self.current_op + 1]),
-                make_parameter(mode2, self.memory[self.current_op + 2]),
+                Parameter::from(mode1, self.memory[self.current_op + 1]),
+                Parameter::from(mode2, self.memory[self.current_op + 2]),
             ),
             6 => Op::JumpIfFalse(
-                make_parameter(mode1, self.memory[self.current_op + 1]),
-                make_parameter(mode2, self.memory[self.current_op + 2]),
+                Parameter::from(mode1, self.memory[self.current_op + 1]),
+                Parameter::from(mode2, self.memory[self.current_op + 2]),
             ),
             7 => Op::LessThan(
-                make_parameter(mode1, self.memory[self.current_op + 1]),
-                make_parameter(mode2, self.memory[self.current_op + 2]),
-                make_parameter(mode3, self.memory[self.current_op + 3]),
+                Parameter::from(mode1, self.memory[self.current_op + 1]),
+                Parameter::from(mode2, self.memory[self.current_op + 2]),
+                Parameter::from(mode3, self.memory[self.current_op + 3]),
             ),
             8 => Op::Equals(
-                make_parameter(mode1, self.memory[self.current_op + 1]),
-                make_parameter(mode2, self.memory[self.current_op + 2]),
-                make_parameter(mode3, self.memory[self.current_op + 3]),
+                Parameter::from(mode1, self.memory[self.current_op + 1]),
+                Parameter::from(mode2, self.memory[self.current_op + 2]),
+                Parameter::from(mode3, self.memory[self.current_op + 3]),
             ),
-            9 => Op::AdjustRelativeBase(make_parameter(mode1, self.memory[self.current_op + 1])),
+            9 => Op::AdjustRelativeBase(Parameter::from(mode1, self.memory[self.current_op + 1])),
             99 => Op::Halt,
             _ => panic!("Invalid opcode {}", opcode),
         }
     }
 
-    fn set_value(&mut self, index: usize, value: i64) {
+    pub fn set_value(&mut self, index: usize, value: i64) {
         while index >= self.memory.len() {
             self.memory.push(0);
         }
         self.memory[index] = value;
     }
 
-    fn get_value(&self, index: usize) -> i64 {
+    pub fn get_value(&self, index: usize) -> i64 {
         if index >= self.memory.len() {
             return 0;
         }
@@ -211,13 +189,13 @@ impl Runnable for IntCodeComputer {
         };
     }
 
-    fn execute_until_stopped(&mut self) {
+    pub fn execute_until_stopped(&mut self) {
         while self.state == State::Running {
             self.execute_step();
         }
     }
 
-    fn get_output(&self, index: usize) -> Option<i64> {
+    pub fn get_output(&self, index: usize) -> Option<i64> {
         if index < self.output.len() {
             Some(self.output[index])
         } else {
@@ -225,22 +203,18 @@ impl Runnable for IntCodeComputer {
         }
     }
 
-    fn get_last_output(&self) -> Option<i64> {
-        if self.output.len() > 0 {
-            Some(self.output[self.output.len() - 1])
-        } else {
-            None
-        }
+    pub fn get_last_output(&self) -> Option<i64> {
+        self.get_output(self.output.len() - 1)
     }
 
-    fn add_input(&mut self, value: i64) {
+    pub fn add_input(&mut self, value: i64) {
         self.input.push(value);
         if self.state == State::Waiting {
             self.state = State::Running;
         }
     }
 
-    fn has_terminated(&self) -> bool {
+    pub fn has_terminated(&self) -> bool {
         self.state == State::Halted
     }
 }
@@ -274,8 +248,6 @@ pub fn read_program_with_input(content: String, value: i64) -> IntCodeComputer {
 
 #[cfg(test)]
 mod tests {
-    use crate::intcode::Runnable;
-
     #[test]
     fn test_simple_program() {
         let mut m = crate::intcode::read_program(String::from("1,9,10,3,2,3,11,0,99,30,40,50"));

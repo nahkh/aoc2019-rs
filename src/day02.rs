@@ -1,6 +1,5 @@
 use crate::input_files::read_content;
 use crate::intcode::read_program;
-use crate::intcode::Runnable;
 
 pub fn execute() {
     let content = read_content(&String::from("data/day02.txt"));

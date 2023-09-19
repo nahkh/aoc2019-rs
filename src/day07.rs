@@ -1,6 +1,5 @@
 use crate::intcode::read_program;
 use crate::intcode::IntCodeComputer;
-use crate::intcode::Runnable;
 use itertools::Itertools; // 0.8.2
 
 fn evaluate_combination(content: String, phases: Vec<&i64>) -> i64 {
