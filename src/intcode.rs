@@ -48,6 +48,33 @@ impl Parameter {
 }
 
 impl IntCodeComputer {
+    pub fn read_program(content: &String) -> IntCodeComputer {
+        let c = content.matches(",").count() + 1;
+        let mut m = IntCodeComputer {
+            current_op: 0,
+            memory: vec![0; c],
+            state: State::Running,
+            panicked: false,
+            current_input: 0,
+            input: Vec::new(),
+            output: Vec::new(),
+            relative_base: 0,
+        };
+        let mut i = 0;
+        for line in content.split(",") {
+            let value = line.trim().parse::<i64>().unwrap();
+            m.memory[i] = value;
+            i += 1;
+        }
+        return m;
+    }
+
+    pub fn read_program_with_input(content: &String, value: i64) -> IntCodeComputer {
+        let mut m = IntCodeComputer::read_program(content);
+        m.add_input(value);
+        m
+    }
+
     fn interpret_op(&self) -> Op {
         let instruction = self.memory[self.current_op];
         let opcode = instruction % 100;
@@ -219,41 +246,16 @@ impl IntCodeComputer {
     }
 }
 
-pub fn read_program(content: String) -> IntCodeComputer {
-    let c = content.matches(",").count() + 1;
-    let mut m = IntCodeComputer {
-        current_op: 0,
-        memory: vec![0; c],
-        state: State::Running,
-        panicked: false,
-        current_input: 0,
-        input: Vec::new(),
-        output: Vec::new(),
-        relative_base: 0,
-    };
-    let mut i = 0;
-    for line in content.split(",") {
-        let value = line.trim().parse::<i64>().unwrap();
-        m.memory[i] = value;
-        i += 1;
-    }
-    return m;
-}
-
-pub fn read_program_with_input(content: String, value: i64) -> IntCodeComputer {
-    let mut m = read_program(content);
-    m.add_input(value);
-    m
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::intcode::IntCodeComputer;
+
     #[test]
     fn test_simple_program() {
-        let mut m = crate::intcode::read_program(String::from("1,9,10,3,2,3,11,0,99,30,40,50"));
+        let mut m = IntCodeComputer::read_program(&String::from("1,9,10,3,2,3,11,0,99,30,40,50"));
         m.execute_until_stopped();
         let mut expected =
-            crate::intcode::read_program(String::from("3500,9,10,70,2,3,11,0,99,30,40,50"));
+            IntCodeComputer::read_program(&String::from("3500,9,10,70,2,3,11,0,99,30,40,50"));
         expected.current_op = 8;
         expected.state = crate::intcode::State::Halted;
         assert_eq!(m, expected);
@@ -261,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_simple_io_program() {
-        let mut m = crate::intcode::read_program_with_input(String::from("3,0,4,0,99"), 77);
+        let mut m = IntCodeComputer::read_program_with_input(&String::from("3,0,4,0,99"), 77);
         m.execute_until_stopped();
         assert_eq!(m.output.len(), 1);
         assert_eq!(m.output[0], 77);
@@ -270,12 +272,12 @@ mod tests {
     #[test]
     fn test_eq_positional() {
         let mut m1 =
-            crate::intcode::read_program_with_input(String::from("3,9,8,9,10,9,4,9,99,-1,8"), 8);
+            IntCodeComputer::read_program_with_input(&String::from("3,9,8,9,10,9,4,9,99,-1,8"), 8);
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
         let mut m2 =
-            crate::intcode::read_program_with_input(String::from("3,9,8,9,10,9,4,9,99,-1,8"), 9);
+            IntCodeComputer::read_program_with_input(&String::from("3,9,8,9,10,9,4,9,99,-1,8"), 9);
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);
@@ -284,12 +286,12 @@ mod tests {
     #[test]
     fn test_lt_positional() {
         let mut m1 =
-            crate::intcode::read_program_with_input(String::from("3,9,7,9,10,9,4,9,99,-1,8"), 7);
+            IntCodeComputer::read_program_with_input(&String::from("3,9,7,9,10,9,4,9,99,-1,8"), 7);
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
         let mut m2 =
-            crate::intcode::read_program_with_input(String::from("3,9,7,9,10,9,4,9,99,-1,8"), 9);
+            IntCodeComputer::read_program_with_input(&String::from("3,9,7,9,10,9,4,9,99,-1,8"), 9);
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);
@@ -298,12 +300,12 @@ mod tests {
     #[test]
     fn test_eq_immediate() {
         let mut m1 =
-            crate::intcode::read_program_with_input(String::from("3,3,1108,-1,8,3,4,3,99"), 8);
+            IntCodeComputer::read_program_with_input(&String::from("3,3,1108,-1,8,3,4,3,99"), 8);
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
         let mut m2 =
-            crate::intcode::read_program_with_input(String::from("3,3,1108,-1,8,3,4,3,99"), 9);
+            IntCodeComputer::read_program_with_input(&String::from("3,3,1108,-1,8,3,4,3,99"), 9);
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);
@@ -312,12 +314,12 @@ mod tests {
     #[test]
     fn test_lt_immediate() {
         let mut m1 =
-            crate::intcode::read_program_with_input(String::from("3,3,1107,-1,8,3,4,3,99"), 7);
+            IntCodeComputer::read_program_with_input(&String::from("3,3,1107,-1,8,3,4,3,99"), 7);
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
         let mut m2 =
-            crate::intcode::read_program_with_input(String::from("3,3,1107,-1,8,3,4,3,99"), 9);
+            IntCodeComputer::read_program_with_input(&String::from("3,3,1107,-1,8,3,4,3,99"), 9);
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 0);
@@ -325,15 +327,15 @@ mod tests {
 
     #[test]
     fn test_jump_positional() {
-        let mut m1 = crate::intcode::read_program_with_input(
-            String::from("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"),
+        let mut m1 = IntCodeComputer::read_program_with_input(
+            &String::from("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"),
             7,
         );
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
-        let mut m2 = crate::intcode::read_program_with_input(
-            String::from("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"),
+        let mut m2 = IntCodeComputer::read_program_with_input(
+            &String::from("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"),
             0,
         );
         m2.execute_until_stopped();
@@ -343,15 +345,15 @@ mod tests {
 
     #[test]
     fn test_jump_immediate() {
-        let mut m1 = crate::intcode::read_program_with_input(
-            String::from("3,3,1105,-1,9,1101,0,0,12,4,12,99,1"),
+        let mut m1 = IntCodeComputer::read_program_with_input(
+            &String::from("3,3,1105,-1,9,1101,0,0,12,4,12,99,1"),
             7,
         );
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 1);
-        let mut m2 = crate::intcode::read_program_with_input(
-            String::from("3,3,1105,-1,9,1101,0,0,12,4,12,99,1"),
+        let mut m2 = IntCodeComputer::read_program_with_input(
+            &String::from("3,3,1105,-1,9,1101,0,0,12,4,12,99,1"),
             0,
         );
         m2.execute_until_stopped();
@@ -361,15 +363,15 @@ mod tests {
 
     #[test]
     fn test_large() {
-        let mut m1 = crate::intcode::read_program_with_input(String::from("3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99"), 7);
+        let mut m1 = IntCodeComputer::read_program_with_input(&String::from("3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99"), 7);
         m1.execute_until_stopped();
         assert_eq!(m1.output.len(), 1);
         assert_eq!(m1.output[0], 999);
-        let mut m2 = crate::intcode::read_program_with_input(String::from("3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99"), 8);
+        let mut m2 = IntCodeComputer::read_program_with_input(&String::from("3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99"), 8);
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 1000);
-        let mut m3 = crate::intcode::read_program_with_input(String::from("3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99"), 9);
+        let mut m3 = IntCodeComputer::read_program_with_input(&String::from("3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99"), 9);
         m3.execute_until_stopped();
         assert_eq!(m3.output.len(), 1);
         assert_eq!(m3.output[0], 1001);
@@ -377,14 +379,14 @@ mod tests {
 
     #[test]
     fn test_relative_mode() {
-        let mut m1 = crate::intcode::read_program(String::from("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99"));
+        let mut m1 = IntCodeComputer::read_program(&String::from("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99"));
         m1.execute_until_stopped();
         assert_eq!(m1.output, vec![109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]);
-        let mut m2 = crate::intcode::read_program(String::from("1102,34915192,34915192,7,4,7,99,0"));
+        let mut m2 = IntCodeComputer::read_program(&String::from("1102,34915192,34915192,7,4,7,99,0"));
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 1219070632396864);
-        let mut m3 = crate::intcode::read_program(String::from("104,1125899906842624,99"));
+        let mut m3 = IntCodeComputer::read_program(&String::from("104,1125899906842624,99"));
         m3.execute_until_stopped();
         assert_eq!(m3.output.len(), 1);
         assert_eq!(m3.output[0], 1125899906842624);

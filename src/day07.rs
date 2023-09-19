@@ -1,11 +1,11 @@
-use crate::intcode::read_program;
+use crate::input_files::read_content;
 use crate::intcode::IntCodeComputer;
 use itertools::Itertools; // 0.8.2
 
-fn evaluate_combination(content: String, phases: Vec<&i64>) -> i64 {
+fn evaluate_combination(content: &String, phases: Vec<&i64>) -> i64 {
     let mut output = 0;
     for phase in phases.iter() {
-        let mut m = read_program(content.clone());
+        let mut m = IntCodeComputer::read_program(content);
         m.add_input(**phase);
         m.add_input(output);
         m.execute_until_stopped();
@@ -15,11 +15,11 @@ fn evaluate_combination(content: String, phases: Vec<&i64>) -> i64 {
     output
 }
 
-fn find_best_combination(content: String) -> i64 {
+fn find_best_combination(content: &String) -> i64 {
     let items: Vec<i64> = vec![0, 1, 2, 3, 4];
     let mut current_best = 0;
     for perm in items.iter().permutations(items.len()) {
-        let value = evaluate_combination(content.clone(), perm);
+        let value = evaluate_combination(content, perm);
         if value > current_best {
             current_best = value;
         }
@@ -28,10 +28,10 @@ fn find_best_combination(content: String) -> i64 {
     current_best
 }
 
-fn evalute_combination_recursively(content: String, phases: Vec<&i64>) -> i64 {
+fn evalute_combination_recursively(content: &String, phases: Vec<&i64>) -> i64 {
     let mut machines: Vec<IntCodeComputer> = Vec::new();
     for phase in phases.iter() {
-        let mut m = read_program(content.clone());
+        let mut m = IntCodeComputer::read_program(&content);
         m.add_input(**phase);
         machines.push(m);
     }
@@ -49,11 +49,11 @@ fn evalute_combination_recursively(content: String, phases: Vec<&i64>) -> i64 {
     current_value
 }
 
-fn find_best_combination_recursively(content: String) -> i64 {
+fn find_best_combination_recursively(content: &String) -> i64 {
     let items: Vec<i64> = vec![5, 6, 7, 8, 9];
     let mut current_best = 0;
     for perm in items.iter().permutations(items.len()) {
-        let value = evalute_combination_recursively(content.clone(), perm);
+        let value = evalute_combination_recursively(content, perm);
         if value > current_best {
             current_best = value;
         }
@@ -63,10 +63,10 @@ fn find_best_combination_recursively(content: String) -> i64 {
 }
 
 pub fn execute() {
-    let content = crate::input_files::read_content(&String::from("data/day07.txt"));
-    let best_combination = find_best_combination(content.clone());
+    let content = read_content(&String::from("data/day07.txt"));
+    let best_combination = find_best_combination(&content);
     println!("Part 1: Best combination {}", best_combination);
-    let best_recursive_combination = find_best_combination_recursively(content.clone());
+    let best_recursive_combination = find_best_combination_recursively(&content);
     println!(
         "Part 2: Best recursive combination {}",
         best_recursive_combination
@@ -81,7 +81,7 @@ mod tests {
             "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5"
                 .to_string();
         let value =
-            crate::day07::evalute_combination_recursively(content, vec![&9, &8, &7, &6, &5]);
+            crate::day07::evalute_combination_recursively(&content, vec![&9, &8, &7, &6, &5]);
         assert_eq!(value, 139629729);
     }
 
@@ -90,7 +90,7 @@ mod tests {
         let content =
             "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5"
                 .to_string();
-        let value = crate::day07::find_best_combination_recursively(content);
+        let value = crate::day07::find_best_combination_recursively(&content);
         assert_eq!(value, 139629729);
     }
 }
