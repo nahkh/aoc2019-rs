@@ -1,26 +1,9 @@
 use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::ops::Add;
 use std::option::Option;
 use std::result::Result;
-
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
-struct Position {
-    x: i32,
-    y: i32,
-}
-
-impl Add for Position {
-    type Output = Self;
-
-    fn add(self, other: Self) -> Self {
-        Self {
-            x: self.x + other.x,
-            y: self.y + other.y,
-        }
-    }
-}
+use crate::position::Position;
 
 trait ManhattanDistance {
     fn distance(self, other: &Self) -> i32;
