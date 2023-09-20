@@ -234,6 +234,10 @@ impl IntCodeComputer {
         self.get_output(self.output.len() - 1)
     }
 
+    pub fn get_output_size(&self) -> usize {
+        self.output.len()
+    }
+
     pub fn add_input(&mut self, value: i64) {
         self.input.push(value);
         if self.state == State::Waiting {

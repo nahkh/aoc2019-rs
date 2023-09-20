@@ -10,6 +10,7 @@ mod day07;
 mod day08;
 mod day09;
 mod day10;
+mod day11;
 mod input_files;
 mod intcode;
 mod position;
@@ -27,6 +28,7 @@ fn execute_day(day: usize) {
         8 => day08::execute(),
         9 => day09::execute(),
         10 => day10::execute(),
+        11 => day11::execute(),
         _ => panic!("Day {} not implemented", day),
     }
     println!("");
@@ -36,7 +38,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        for i in 1..11 {
+        for i in 1..12 {
             execute_day(i);
         }
     } else {
