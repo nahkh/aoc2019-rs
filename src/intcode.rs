@@ -383,10 +383,16 @@ mod tests {
 
     #[test]
     fn test_relative_mode() {
-        let mut m1 = IntCodeComputer::read_program(&String::from("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99"));
+        let mut m1 = IntCodeComputer::read_program(&String::from(
+            "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99",
+        ));
         m1.execute_until_stopped();
-        assert_eq!(m1.output, vec![109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]);
-        let mut m2 = IntCodeComputer::read_program(&String::from("1102,34915192,34915192,7,4,7,99,0"));
+        assert_eq!(
+            m1.output,
+            vec![109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99]
+        );
+        let mut m2 =
+            IntCodeComputer::read_program(&String::from("1102,34915192,34915192,7,4,7,99,0"));
         m2.execute_until_stopped();
         assert_eq!(m2.output.len(), 1);
         assert_eq!(m2.output[0], 1219070632396864);

@@ -88,7 +88,6 @@ fn get_char(value: u8) -> char {
     }
 }
 
-
 fn draw_layer(layer: &Layer) {
     let mut output = String::new();
     for y in 0..layer.height {
@@ -118,7 +117,7 @@ fn part1(image: &Image) -> usize {
             best_value = layer.count_char(1) * layer.count_char(2);
         }
     }
-    
+
     best_value
 }
 

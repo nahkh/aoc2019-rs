@@ -1,9 +1,9 @@
+use crate::position::Position;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::option::Option;
 use std::result::Result;
-use crate::position::Position;
 
 trait ManhattanDistance {
     fn distance(self, other: &Self) -> i32;

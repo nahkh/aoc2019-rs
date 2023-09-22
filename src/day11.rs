@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use crate::position::Position;
-use crate::intcode::IntCodeComputer;
 use crate::input_files::read_content;
+use crate::intcode::IntCodeComputer;
+use crate::position::Position;
+use std::collections::HashMap;
 
 enum Orientation {
     Up,
@@ -75,7 +75,13 @@ struct HullSurface {
 
 impl HullSurface {
     fn new() -> HullSurface {
-        HullSurface { paint: HashMap::new(), min_x: i32::MAX, max_x: i32::MIN, min_y: i32::MAX, max_y: i32::MIN}
+        HullSurface {
+            paint: HashMap::new(),
+            min_x: i32::MAX,
+            max_x: i32::MIN,
+            min_y: i32::MAX,
+            max_y: i32::MIN,
+        }
     }
     fn get_color(&self, position: &Position) -> &Color {
         self.paint.get(position).unwrap_or(&Color::Black)
@@ -158,7 +164,6 @@ fn part2(content: &String) {
 
     println!("Part 2:\n{}", surface.render());
 }
-
 
 pub fn execute() {
     let content = read_content(&String::from("data/day11.txt"));

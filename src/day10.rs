@@ -1,7 +1,7 @@
 use crate::input_files::read_content;
-use std::collections::HashSet;
 use crate::position::Position;
 use gcd::Gcd;
+use std::collections::HashSet;
 use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::PI;
 
@@ -50,11 +50,11 @@ impl Quarter {
 
 #[derive(Debug)]
 struct AsteroidField {
-    asteroids: HashSet<Position>
+    asteroids: HashSet<Position>,
 }
 
 impl AsteroidField {
-    fn parse(content: &String) -> AsteroidField{
+    fn parse(content: &String) -> AsteroidField {
         let mut asteroids = HashSet::new();
         let mut y = 0;
         for line in content.lines() {
@@ -67,9 +67,7 @@ impl AsteroidField {
             }
             y += 1;
         }
-        AsteroidField {
-            asteroids
-        }
+        AsteroidField { asteroids }
     }
 
     fn centered_on(&self, asteroid: Position) -> AsteroidField {
@@ -79,12 +77,9 @@ impl AsteroidField {
                 asteroids.insert(*other - asteroid);
             }
         }
-        AsteroidField {
-            asteroids
-        }
+        AsteroidField { asteroids }
     }
-    
-    
+
     fn get_angle(asteroid: Position) -> f64 {
         let angle = match Quarter::of(asteroid) {
             Quarter::Center => 0.0_f64,
@@ -98,7 +93,12 @@ impl AsteroidField {
             Quarter::BottomRight => PI - (asteroid.x as f64 / asteroid.y as f64).atan(),
         };
 
-        assert!(angle >= 0.0, "{:?} should've had a positive angle, had {:.3}", asteroid, angle);
+        assert!(
+            angle >= 0.0,
+            "{:?} should've had a positive angle, had {:.3}",
+            asteroid,
+            angle
+        );
 
         angle
     }
@@ -106,10 +106,9 @@ impl AsteroidField {
     fn get_rotation_angle(&self, asteroid: Position) -> f64 {
         let offset = self.create_offset(asteroid);
         let shade_count = self.asteroid_is_shaded_by(asteroid, offset);
-        
+
         Self::get_angle(asteroid) + (shade_count as f64 * 2.0 * PI)
     }
-
 
     fn asteroid_is_shaded_by(&self, asteroid: Position, offset: Position) -> usize {
         let mut shading_count = 0;
@@ -120,7 +119,13 @@ impl AsteroidField {
                 shading_count += 1;
             }
             shade = shade + offset;
-            assert!(Quarter::of(shade) == initial_quarter || shade == Position::new(0, 0), "{:?} -> {:?} led to {:?}", asteroid, offset, shade);
+            assert!(
+                Quarter::of(shade) == initial_quarter || shade == Position::new(0, 0),
+                "{:?} -> {:?} led to {:?}",
+                asteroid,
+                offset,
+                shade
+            );
         }
         return shading_count;
     }
@@ -166,9 +171,7 @@ impl AsteroidField {
                 asteroids.insert(*other);
             }
         }
-        AsteroidField {
-            asteroids
-        }
+        AsteroidField { asteroids }
     }
 }
 
@@ -199,7 +202,6 @@ fn find_200th_asteroid(asteroid_field: &AsteroidField, center: Position) -> Posi
     asteroids.get(199).unwrap().1
 }
 
-
 pub fn execute() {
     let content = read_content(&String::from("data/day10.txt"));
     let asteroid_field = AsteroidField::parse(&content);
@@ -207,22 +209,31 @@ pub fn execute() {
     println!("Part 1: {} at {:?}", count, best_asteroid);
     let asteroid200 = find_200th_asteroid(&asteroid_field, best_asteroid);
     let original_asteroid200 = asteroid200 + best_asteroid;
-    println!("Part 2: {:?} -> {}", original_asteroid200, original_asteroid200.x * 100 + original_asteroid200.y);
+    println!(
+        "Part 2: {:?} -> {}",
+        original_asteroid200,
+        original_asteroid200.x * 100 + original_asteroid200.y
+    );
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::day10::find_200th_asteroid;
+    use crate::day10::find_best_asteroid;
+    use crate::day10::AsteroidField;
     use crate::day10::FRAC_PI_2;
     use crate::day10::PI;
-    use crate::position::Position;
     use crate::input_files::read_content;
-    use crate::day10::AsteroidField;
-    use crate::day10::find_best_asteroid;
-    use crate::day10::find_200th_asteroid;
+    use crate::position::Position;
 
     fn assert_near(expected: f64, actual: f64) {
         let abs_difference = (expected - actual).abs();
-        assert!(abs_difference < 1e-10, "{:.3} should be near {:.3}", actual, expected);
+        assert!(
+            abs_difference < 1e-10,
+            "{:.3} should be near {:.3}",
+            actual,
+            expected
+        );
     }
 
     #[test]
@@ -230,11 +241,26 @@ mod tests {
         assert_near(0.0, AsteroidField::get_angle(Position::new(0, -1)));
         assert_near(FRAC_PI_2, AsteroidField::get_angle(Position::new(1, 0)));
         assert_near(PI, AsteroidField::get_angle(Position::new(0, 1)));
-        assert_near(3.0 * FRAC_PI_2, AsteroidField::get_angle(Position::new(-1, 0)));
-        assert_near(0.5 * FRAC_PI_2, AsteroidField::get_angle(Position::new(1, -1)));
-        assert_near(1.5 * FRAC_PI_2, AsteroidField::get_angle(Position::new(1, 1)));
-        assert_near(2.5 * FRAC_PI_2, AsteroidField::get_angle(Position::new(-1, 1)));
-        assert_near(3.5 * FRAC_PI_2, AsteroidField::get_angle(Position::new(-1, -1)));
+        assert_near(
+            3.0 * FRAC_PI_2,
+            AsteroidField::get_angle(Position::new(-1, 0)),
+        );
+        assert_near(
+            0.5 * FRAC_PI_2,
+            AsteroidField::get_angle(Position::new(1, -1)),
+        );
+        assert_near(
+            1.5 * FRAC_PI_2,
+            AsteroidField::get_angle(Position::new(1, 1)),
+        );
+        assert_near(
+            2.5 * FRAC_PI_2,
+            AsteroidField::get_angle(Position::new(-1, 1)),
+        );
+        assert_near(
+            3.5 * FRAC_PI_2,
+            AsteroidField::get_angle(Position::new(-1, -1)),
+        );
     }
 
     #[test]
@@ -248,5 +274,4 @@ mod tests {
         let original_asteroid200 = asteroid200 + best_asteroid;
         assert_eq!(original_asteroid200, Position::new(8, 2));
     }
-
 }
