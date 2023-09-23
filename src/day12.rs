@@ -1,6 +1,8 @@
 use crate::input_files::read_content;
 use crate::position3::Position3;
+use gcd::Gcd;
 use regex::Regex;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 struct Moon {
@@ -78,6 +80,10 @@ struct Orbits {
 }
 
 impl Orbits {
+    fn new(moons: Vec<Moon>) -> Orbits {
+        Orbits { moons }
+    }
+
     fn simulate_step(&mut self) {
         let moon_copy = self.moons.to_vec();
         for i in 0..self.moons.len() {
@@ -105,6 +111,129 @@ impl Orbits {
     }
 }
 
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+struct Moon1d {
+    position: i32,
+    velocity: i32,
+}
+
+impl Moon1d {
+    fn new(position: i32, velocity: i32) -> Moon1d {
+        Self { position, velocity }
+    }
+
+    fn evolve(&self, acceleration: i32) -> Moon1d {
+        let new_velocity = self.velocity + acceleration;
+        Self {
+            position: self.position + new_velocity,
+            velocity: new_velocity,
+        }
+    }
+
+    fn calcute_gravity(&self, other: &Self) -> i32 {
+        if self.position > other.position {
+            -1
+        } else if self.position < other.position {
+            1
+        } else {
+            0
+        }
+    }
+}
+
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+struct Orbits1d {
+    moon1: Moon1d,
+    moon2: Moon1d,
+    moon3: Moon1d,
+    moon4: Moon1d,
+}
+
+impl Orbits1d {
+    fn new(moon1: Moon1d, moon2: Moon1d, moon3: Moon1d, moon4: Moon1d) -> Orbits1d {
+        Self {
+            moon1,
+            moon2,
+            moon3,
+            moon4,
+        }
+    }
+
+    fn evolve(&self) -> Orbits1d {
+        let d1 = self.moon1.calcute_gravity(&self.moon2)
+            + self.moon1.calcute_gravity(&self.moon3)
+            + self.moon1.calcute_gravity(&self.moon4);
+        let d2 = self.moon2.calcute_gravity(&self.moon1)
+            + self.moon2.calcute_gravity(&self.moon3)
+            + self.moon2.calcute_gravity(&self.moon4);
+        let d3 = self.moon3.calcute_gravity(&self.moon1)
+            + self.moon3.calcute_gravity(&self.moon2)
+            + self.moon3.calcute_gravity(&self.moon4);
+        let d4 = self.moon4.calcute_gravity(&self.moon1)
+            + self.moon4.calcute_gravity(&self.moon2)
+            + self.moon4.calcute_gravity(&self.moon3);
+        Orbits1d::new(
+            self.moon1.evolve(d1),
+            self.moon2.evolve(d2),
+            self.moon3.evolve(d3),
+            self.moon4.evolve(d4),
+        )
+    }
+
+    fn calculate_cycle(&self) -> u64 {
+        let mut cycles = 0;
+        let mut visited_states = HashSet::new();
+        let mut current_state = self.clone();
+        while !visited_states.contains(&current_state) {
+            visited_states.insert(current_state);
+            current_state = current_state.evolve();
+            cycles += 1;
+        }
+        cycles
+    }
+}
+
+#[derive(Debug, Hash, Eq, PartialEq)]
+struct CompositeOrbits {
+    orbits_x: Orbits1d,
+    orbits_y: Orbits1d,
+    orbits_z: Orbits1d,
+}
+
+impl CompositeOrbits {
+    fn new(moons: Vec<Moon>) -> CompositeOrbits {
+        assert!(moons.len() == 4);
+        CompositeOrbits {
+            orbits_x: Orbits1d {
+                moon1: Moon1d::new(moons[0].position.x, moons[0].velocity.x),
+                moon2: Moon1d::new(moons[1].position.x, moons[1].velocity.x),
+                moon3: Moon1d::new(moons[2].position.x, moons[2].velocity.x),
+                moon4: Moon1d::new(moons[3].position.x, moons[3].velocity.x),
+            },
+            orbits_y: Orbits1d {
+                moon1: Moon1d::new(moons[0].position.y, moons[0].velocity.y),
+                moon2: Moon1d::new(moons[1].position.y, moons[1].velocity.y),
+                moon3: Moon1d::new(moons[2].position.y, moons[2].velocity.y),
+                moon4: Moon1d::new(moons[3].position.y, moons[3].velocity.y),
+            },
+            orbits_z: Orbits1d {
+                moon1: Moon1d::new(moons[0].position.z, moons[0].velocity.z),
+                moon2: Moon1d::new(moons[1].position.z, moons[1].velocity.z),
+                moon3: Moon1d::new(moons[2].position.z, moons[2].velocity.z),
+                moon4: Moon1d::new(moons[3].position.z, moons[3].velocity.z),
+            },
+        }
+    }
+
+    fn calculate_cycle(&self) -> u64 {
+        let cycle_x = self.orbits_x.calculate_cycle();
+        let cycle_y = self.orbits_y.calculate_cycle();
+        let cycle_yx = cycle_x * cycle_y / (cycle_x.gcd(cycle_y));
+        let cycle_z = self.orbits_z.calculate_cycle();
+        cycle_yx * cycle_z / (cycle_yx.gcd(cycle_z))
+    }
+}
+
 fn parse_position(line: &String) -> Option<Position3> {
     let re = Regex::new(r"^<x=(-?\d+), y=(-?\d+), z=(-?\d+)>$").unwrap();
     let matched = re.captures(line)?;
@@ -115,7 +244,7 @@ fn parse_position(line: &String) -> Option<Position3> {
     ));
 }
 
-fn parse_orbits(content: &String) -> Orbits {
+fn parse_orbits(content: &String) -> Vec<Moon> {
     let mut moons = Vec::new();
     for line in content.lines() {
         let position = parse_position(&line.to_string());
@@ -124,11 +253,11 @@ fn parse_orbits(content: &String) -> Orbits {
         }
     }
 
-    Orbits { moons }
+    moons
 }
 
 fn part1(content: &String, print_steps: bool) {
-    let mut orbits = parse_orbits(content);
+    let mut orbits = Orbits::new(parse_orbits(content));
     for step in 0..1000 {
         if print_steps {
             println!("After {} steps:", step);
@@ -146,9 +275,18 @@ fn part1(content: &String, print_steps: bool) {
     );
 }
 
+fn part2(content: &String) {
+    let orbits = CompositeOrbits::new(parse_orbits(content));
+    println!(
+        "Part 2: The universe cycles in {:?} steps",
+        orbits.calculate_cycle()
+    );
+}
+
 pub fn execute() {
     let content = read_content(&"data/day12.txt".to_string());
     part1(&content, false);
+    part2(&content);
 }
 
 #[cfg(test)]
