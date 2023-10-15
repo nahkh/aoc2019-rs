@@ -21,7 +21,7 @@ impl Material {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Reaction {
     inputs: HashMap<Material, usize>,
     output: Material,
@@ -52,18 +52,23 @@ impl Reaction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Nanofactory {
     recipes: HashMap<Material, Reaction>,
     ranks: HashMap<Material, usize>,
+    max_requirements: HashMap<Material, usize>,
 }
 
 impl Nanofactory {
     fn new(content: &String) -> Option<Nanofactory> {
         let mut recipes = HashMap::new();
+        let mut max_requirements = HashMap::new();
         for line in content.lines() {
             let reaction = Reaction::parse(&line.to_string())?;
             let output_material = reaction.output.clone();
+            for (material, amount) in reaction.inputs.clone().iter() {
+                max_requirements.insert(material.clone(), *amount.max(max_requirements.get(material).unwrap_or(&0)));
+            }
             recipes.insert(output_material, reaction);
         }
         let mut ranks = HashMap::new();
@@ -87,6 +92,7 @@ impl Nanofactory {
         Some(Nanofactory {
             recipes,
             ranks,
+            max_requirements,
         })
     }
 
@@ -104,7 +110,7 @@ impl Nanofactory {
         highest_rank_material
     }
 
-    fn calculate_fuel(&self) -> usize {
+    fn calculate_ore_needed_for_1_fuel(&self) -> usize {
         let mut needed_materials = HashMap::from([(Material::Fuel, 1)]);
         
         while needed_materials.len() > 1 || !needed_materials.contains_key(&Material::Ore) {
@@ -119,18 +125,108 @@ impl Nanofactory {
         }
         return *needed_materials.get(&Material::Ore).unwrap();
     }
+
+    fn calculate_maximum_fuel_for_1_trillion_ore(&self) -> usize {
+        let search_state = SearchState::new(self, 1000000000000);
+        search_state.search()
+    }
 }
 
+#[derive(Clone)]
+struct SearchState<'a> {
+    available_materials: HashMap<Material, usize>,
+    factory: &'a Nanofactory,
+}
 
+impl<'a> SearchState<'a> {
+    fn new(factory: &'a Nanofactory, initial_ore: usize) -> SearchState {
+        SearchState {
+            available_materials: HashMap::from([(Material::Ore, initial_ore)]),
+            factory,
+        }
+    }
+
+    fn can_make(&self, material: &Material) -> bool {
+        if *material == Material::Ore {
+            return false;
+        }
+        let recipe = self.factory.recipes.get(material).unwrap();
+        for (precursor_material, amount) in recipe.inputs.iter() {
+            if self.available_materials.get(precursor_material).unwrap_or(&0) < amount {
+                return false;
+            }
+        }
+        
+        true
+    }
+
+    fn is_needed(&self, material: &Material) -> bool {
+        if *material == Material::Fuel {
+            return true;
+        }
+
+        let current_level = self.available_materials.get(material).unwrap_or(&0);
+
+        current_level < self.factory.max_requirements.get(material).unwrap_or(&0)
+    }
+
+    fn make(&self, material: &Material) -> SearchState<'a> {
+        let mut new_materials = self.available_materials.clone();
+        let recipe = self.factory.recipes.get(material).unwrap();
+        for (precursor_material, amount) in recipe.inputs.iter() {
+            new_materials.insert(precursor_material.clone(), new_materials.get(&precursor_material).unwrap() - amount);
+        }
+        new_materials.insert(material.clone(), new_materials.get(material).unwrap_or(&0) + recipe.output_multiplier);
+
+        SearchState {
+            available_materials: new_materials,
+            factory: self.factory,
+        }
+    }
+
+    fn search(&self) -> usize {
+        let mut best_score = *self.available_materials.get(&Material::Fuel).unwrap_or(&0);
+        let mut states = Vec::new();
+        states.push(self.clone());
+        while states.len() > 0 {
+            let current = states.pop().unwrap();
+            let mut can_make_something = false;
+            for material in self.factory.recipes.keys() {
+                if !current.can_make(material) {
+                    continue;
+                }
+                if !current.is_needed(material) {
+                    continue;
+                }
+                can_make_something = true;
+                let child = current.make(material);
+                states.push(child);
+            }
+            if !can_make_something {
+                best_score = best_score.max(*self.available_materials.get(&Material::Fuel).unwrap_or(&0));
+            }
+        }
+        
+
+        best_score
+    }
+}
 
 fn part1(recipe_description: &String) {
     let factory = Nanofactory::new(recipe_description).unwrap();
-    println!("Part 1: {} ore needed", factory.calculate_fuel());
+    println!("Part 1: {} ore needed", factory.calculate_ore_needed_for_1_fuel());
+}
+
+fn part2(recipe_description: &String) {
+    let factory = Nanofactory::new(recipe_description).unwrap();
+    //println!("Part 2: {} fuel produced with one trillion ore", factory..calculate_maximum_fuel_for_1_trillion_ore());
+    println!("Part 2: Not implemented");
 }
 
 pub fn execute() {
     let content = read_content(&"data/day14.txt".to_string());
     part1(&content);
+    part2(&content);
 }
 
 
@@ -138,9 +234,8 @@ pub fn execute() {
 mod tests {
     use crate::day14::*;
 
-    #[test]
-    fn test_calculate_fuel() {
-        let factory = Nanofactory::new(&"157 ORE => 5 NZVS
+    fn factory1() -> Nanofactory{
+        Nanofactory::new(&"157 ORE => 5 NZVS
         165 ORE => 6 DCFZ
         44 XJWVT, 5 KHKGT, 1 QDVJ, 29 NZVS, 9 GPVTF, 48 HKGWZ => 1 FUEL
         12 HKGWZ, 1 GPVTF, 8 PSHF => 9 QDVJ
@@ -148,7 +243,56 @@ mod tests {
         177 ORE => 5 HKGWZ
         7 DCFZ, 7 PSHF => 2 XJWVT
         165 ORE => 2 GPVTF
-        3 DCFZ, 7 NZVS, 5 HKGWZ, 10 PSHF => 8 KHKGT".to_string()).unwrap();
-        assert_eq!(factory.calculate_fuel(), 13312);
+        3 DCFZ, 7 NZVS, 5 HKGWZ, 10 PSHF => 8 KHKGT".to_string()).unwrap()
+    }
+
+    fn factory2() -> Nanofactory{
+        Nanofactory::new(&"2 VPVL, 7 FWMGM, 2 CXFTF, 11 MNCFX => 1 STKFG
+        17 NVRVD, 3 JNWZP => 8 VPVL
+        53 STKFG, 6 MNCFX, 46 VJHF, 81 HVMC, 68 CXFTF, 25 GNMV => 1 FUEL
+        22 VJHF, 37 MNCFX => 5 FWMGM
+        139 ORE => 4 NVRVD
+        144 ORE => 7 JNWZP
+        5 MNCFX, 7 RFSQX, 2 FWMGM, 2 VPVL, 19 CXFTF => 3 HVMC
+        5 VJHF, 7 MNCFX, 9 VPVL, 37 CXFTF => 6 GNMV
+        145 ORE => 6 MNCFX
+        1 NVRVD => 8 CXFTF
+        1 VJHF, 6 MNCFX => 4 RFSQX
+        176 ORE => 6 VJHF".to_string()).unwrap()
+    }
+
+    fn factory3() -> Nanofactory{
+        Nanofactory::new(&"171 ORE => 8 CNZTR
+        7 ZLQW, 3 BMBT, 9 XCVML, 26 XMNCP, 1 WPTQ, 2 MZWV, 1 RJRHP => 4 PLWSL
+        114 ORE => 4 BHXH
+        14 VRPVC => 6 BMBT
+        6 BHXH, 18 KTJDG, 12 WPTQ, 7 PLWSL, 31 FHTLT, 37 ZDVW => 1 FUEL
+        6 WPTQ, 2 BMBT, 8 ZLQW, 18 KTJDG, 1 XMNCP, 6 MZWV, 1 RJRHP => 6 FHTLT
+        15 XDBXC, 2 LTCX, 1 VRPVC => 6 ZLQW
+        13 WPTQ, 10 LTCX, 3 RJRHP, 14 XMNCP, 2 MZWV, 1 ZLQW => 1 ZDVW
+        5 BMBT => 4 WPTQ
+        189 ORE => 9 KTJDG
+        1 MZWV, 17 XDBXC, 3 XCVML => 2 XMNCP
+        12 VRPVC, 27 CNZTR => 2 XDBXC
+        15 KTJDG, 12 BHXH => 5 XCVML
+        3 BHXH, 2 VRPVC => 7 MZWV
+        121 ORE => 7 VRPVC
+        7 XCVML => 6 RJRHP
+        5 BHXH, 4 VRPVC => 5 LTCX".to_string()).unwrap()
+    }
+
+    #[test]
+    fn test_calculate_ore_needed_for_1_fuel() {
+        assert_eq!(factory1().calculate_ore_needed_for_1_fuel(), 13312);
+        assert_eq!(factory2().calculate_ore_needed_for_1_fuel(), 180697);
+        assert_eq!(factory3().calculate_ore_needed_for_1_fuel(), 2210736);
+    }
+
+    // This test is disabled since it doesn't work yet
+    //#[test]
+    fn test_calculate_fuel_from_1_trillion_ore() {
+        assert_eq!(factory1().calculate_maximum_fuel_for_1_trillion_ore(), 82892753);
+        assert_eq!(factory2().calculate_maximum_fuel_for_1_trillion_ore(), 5586022);
+        assert_eq!(factory3().calculate_maximum_fuel_for_1_trillion_ore(), 460664);
     }
 }
