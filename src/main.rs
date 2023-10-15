@@ -14,6 +14,7 @@ mod day11;
 mod day12;
 mod day13;
 mod day14;
+mod day15;
 mod input_files;
 mod intcode;
 mod position;
@@ -36,6 +37,7 @@ fn execute_day(day: usize) {
         12 => day12::execute(),
         13 => day13::execute(),
         14 => day14::execute(),
+        15 => day15::execute(),
         _ => panic!("Day {} not implemented", day),
     }
     println!("");
