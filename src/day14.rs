@@ -23,9 +23,9 @@ impl Material {
 
 #[derive(Debug, Clone)]
 struct Reaction {
-    inputs: HashMap<Material, usize>,
+    inputs: HashMap<Material, u64>,
     output: Material,
-    output_multiplier: usize,
+    output_multiplier: u64,
 }
 
 impl Reaction {
@@ -36,12 +36,12 @@ impl Reaction {
         let re = Regex::new(r"^(\d+) (\w+)$").unwrap();
         for input in main_parts.get(0)?.split(", ") {
             let matched = re.captures(input)?;
-            let count = matched[1].parse::<usize>().ok()?;
+            let count = matched[1].parse::<u64>().ok()?;
             let material = Material::parse(&matched[2].to_string());
             inputs.insert(material, count);
         }
         let matched = re.captures(main_parts.get(1)?)?;
-        let count = matched[1].parse::<usize>().ok()?;
+        let count = matched[1].parse::<u64>().ok()?;
         let material = Material::parse(&matched[2].to_string());
         
         Some(Reaction {
@@ -55,26 +55,21 @@ impl Reaction {
 #[derive(Debug, Clone)]
 struct Nanofactory {
     recipes: HashMap<Material, Reaction>,
-    ranks: HashMap<Material, usize>,
-    max_requirements: HashMap<Material, usize>,
+    ranks: HashMap<Material, u64>,
 }
 
 impl Nanofactory {
     fn new(content: &String) -> Option<Nanofactory> {
         let mut recipes = HashMap::new();
-        let mut max_requirements = HashMap::new();
         for line in content.lines() {
             let reaction = Reaction::parse(&line.to_string())?;
             let output_material = reaction.output.clone();
-            for (material, amount) in reaction.inputs.clone().iter() {
-                max_requirements.insert(material.clone(), *amount.max(max_requirements.get(material).unwrap_or(&0)));
-            }
             recipes.insert(output_material, reaction);
         }
         let mut ranks = HashMap::new();
         ranks.insert(Material::Ore, 0);
 
-        fn determine_rank(material: &Material, recipes: &HashMap<Material, Reaction>, ranks: &mut HashMap<Material, usize>) -> usize {
+        fn determine_rank(material: &Material, recipes: &HashMap<Material, Reaction>, ranks: &mut HashMap<Material, u64>) -> u64 {
             if ranks.contains_key(material) {
                 return *ranks.get(material).unwrap();
             }
@@ -92,11 +87,10 @@ impl Nanofactory {
         Some(Nanofactory {
             recipes,
             ranks,
-            max_requirements,
         })
     }
 
-    fn find_highest_rank_material(&self, materials: &HashMap<Material, usize>) -> Option<Material> {
+    fn find_highest_rank_material(&self, materials: &HashMap<Material, u64>) -> Option<Material> {
         let mut highest_rank_material = None;
         let mut highest_rank = 0;
         for material in materials.keys() {
@@ -110,105 +104,58 @@ impl Nanofactory {
         highest_rank_material
     }
 
-    fn calculate_ore_needed_for_1_fuel(&self) -> usize {
-        let mut needed_materials = HashMap::from([(Material::Fuel, 1)]);
-        
+    fn calculate_ore_needed_for_1_fuel(&self) -> u64 {
+        self.calculate_ore_needed_for(&Material::Fuel, 1)
+    }
+
+    fn calculate_ore_needed_for(&self, material: &Material, amount: u64) -> u64 {
+        if material == &Material::Ore {
+            return amount;
+        }
+        let mut needed_materials = HashMap::from([(material.clone(), amount)]);
+
         while needed_materials.len() > 1 || !needed_materials.contains_key(&Material::Ore) {
             let material = self.find_highest_rank_material(&needed_materials).unwrap();
             let amount_needed = needed_materials.get(&material).unwrap();
-            let reaction = self.recipes.get(&material).unwrap();
-            let reaction_multiplier = (amount_needed + reaction.output_multiplier - 1) / reaction.output_multiplier;
-            for (input_material, input_amount) in reaction.inputs.iter() {
-                needed_materials.insert(input_material.clone(), needed_materials.get(&input_material).unwrap_or(&0) + input_amount * reaction_multiplier);
+            if amount_needed > &0 {
+                let reaction = self.recipes.get(&material).unwrap();
+                let reaction_multiplier = (amount_needed + reaction.output_multiplier - 1) / reaction.output_multiplier;
+                for (input_material, input_amount) in reaction.inputs.iter() {
+                    needed_materials.insert(input_material.clone(), needed_materials.get(&input_material).unwrap_or(&0) + input_amount * reaction_multiplier);
+                }
             }
             needed_materials.remove(&material);
         }
-        return *needed_materials.get(&Material::Ore).unwrap();
+
+        *needed_materials.get(&Material::Ore).unwrap()
     }
 
-    fn calculate_maximum_fuel_for_1_trillion_ore(&self) -> usize {
-        let search_state = SearchState::new(self, 1000000000000);
-        search_state.search()
-    }
-}
-
-#[derive(Clone)]
-struct SearchState<'a> {
-    available_materials: HashMap<Material, usize>,
-    factory: &'a Nanofactory,
-}
-
-impl<'a> SearchState<'a> {
-    fn new(factory: &'a Nanofactory, initial_ore: usize) -> SearchState {
-        SearchState {
-            available_materials: HashMap::from([(Material::Ore, initial_ore)]),
-            factory,
-        }
-    }
-
-    fn can_make(&self, material: &Material) -> bool {
-        if *material == Material::Ore {
-            return false;
-        }
-        let recipe = self.factory.recipes.get(material).unwrap();
-        for (precursor_material, amount) in recipe.inputs.iter() {
-            if self.available_materials.get(precursor_material).unwrap_or(&0) < amount {
-                return false;
+    fn calculate_maximum_fuel_for_1_trillion_ore(&self) -> u64 {
+        let ore_needed_for_1_fuel = self.calculate_ore_needed_for_1_fuel();
+        let max_ore = 1000000000000;
+        let mut best_guess = max_ore / ore_needed_for_1_fuel;
+        let mut actually_needed_ore = self.calculate_ore_needed_for(&Material::Fuel, best_guess);
+        let mut best_confirmed_guess = best_guess;
+        while actually_needed_ore <= max_ore {
+            let surplus = max_ore - actually_needed_ore;
+            let additional_fuel = surplus / ore_needed_for_1_fuel;
+            if additional_fuel == 0 {
+                break;
+            }
+            best_guess += additional_fuel;
+            actually_needed_ore = self.calculate_ore_needed_for(&Material::Fuel, best_guess);
+            if actually_needed_ore <= max_ore {
+                best_confirmed_guess = best_guess;
             }
         }
-        
-        true
-    }
-
-    fn is_needed(&self, material: &Material) -> bool {
-        if *material == Material::Fuel {
-            return true;
-        }
-
-        let current_level = self.available_materials.get(material).unwrap_or(&0);
-
-        current_level < self.factory.max_requirements.get(material).unwrap_or(&0)
-    }
-
-    fn make(&self, material: &Material) -> SearchState<'a> {
-        let mut new_materials = self.available_materials.clone();
-        let recipe = self.factory.recipes.get(material).unwrap();
-        for (precursor_material, amount) in recipe.inputs.iter() {
-            new_materials.insert(precursor_material.clone(), new_materials.get(&precursor_material).unwrap() - amount);
-        }
-        new_materials.insert(material.clone(), new_materials.get(material).unwrap_or(&0) + recipe.output_multiplier);
-
-        SearchState {
-            available_materials: new_materials,
-            factory: self.factory,
-        }
-    }
-
-    fn search(&self) -> usize {
-        let mut best_score = *self.available_materials.get(&Material::Fuel).unwrap_or(&0);
-        let mut states = Vec::new();
-        states.push(self.clone());
-        while states.len() > 0 {
-            let current = states.pop().unwrap();
-            let mut can_make_something = false;
-            for material in self.factory.recipes.keys() {
-                if !current.can_make(material) {
-                    continue;
-                }
-                if !current.is_needed(material) {
-                    continue;
-                }
-                can_make_something = true;
-                let child = current.make(material);
-                states.push(child);
-            }
-            if !can_make_something {
-                best_score = best_score.max(*self.available_materials.get(&Material::Fuel).unwrap_or(&0));
+        loop {
+            actually_needed_ore = self.calculate_ore_needed_for(&Material::Fuel, best_confirmed_guess + 1);
+            if actually_needed_ore <= max_ore {
+                best_confirmed_guess = best_confirmed_guess + 1;
+            } else {
+                return best_confirmed_guess;
             }
         }
-        
-
-        best_score
     }
 }
 
@@ -219,8 +166,7 @@ fn part1(recipe_description: &String) {
 
 fn part2(recipe_description: &String) {
     let factory = Nanofactory::new(recipe_description).unwrap();
-    //println!("Part 2: {} fuel produced with one trillion ore", factory..calculate_maximum_fuel_for_1_trillion_ore());
-    println!("Part 2: Not implemented");
+    println!("Part 2: {} fuel produced with one trillion ore", factory.calculate_maximum_fuel_for_1_trillion_ore());
 }
 
 pub fn execute() {
@@ -288,8 +234,7 @@ mod tests {
         assert_eq!(factory3().calculate_ore_needed_for_1_fuel(), 2210736);
     }
 
-    // This test is disabled since it doesn't work yet
-    //#[test]
+    #[test]
     fn test_calculate_fuel_from_1_trillion_ore() {
         assert_eq!(factory1().calculate_maximum_fuel_for_1_trillion_ore(), 82892753);
         assert_eq!(factory2().calculate_maximum_fuel_for_1_trillion_ore(), 5586022);
