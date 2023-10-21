@@ -1,10 +1,10 @@
-use crate::position::Position;
-use crate::intcode::IntCodeComputer;
 use crate::input_files::read_content;
+use crate::intcode::IntCodeComputer;
+use crate::position::Position;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::BinaryHeap;
-use std::cmp::Ordering;
 use std::slice::Iter;
 
 #[derive(Hash, PartialEq, Clone)]
@@ -65,7 +65,12 @@ impl Direction {
     }
 
     fn iterator() -> Iter<'static, Direction> {
-        static DIRECTIONS: [Direction; 4] = [Direction::North, Direction::South, Direction::East, Direction::West];
+        static DIRECTIONS: [Direction; 4] = [
+            Direction::North,
+            Direction::South,
+            Direction::East,
+            Direction::West,
+        ];
         DIRECTIONS.iter()
     }
 }
@@ -92,9 +97,8 @@ impl Route {
 
     fn len(&self) -> usize {
         self.directions.len()
-    } 
+    }
 }
-
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 struct PositionNode {
@@ -114,14 +118,16 @@ impl PositionNode {
 
     fn apply_direction(&self, direction: &Direction) -> PositionNode {
         PositionNode {
-            cost: self.cost + 1, 
+            cost: self.cost + 1,
             position: self.position + direction.as_position(),
-            route: self.route.append(direction)
+            route: self.route.append(direction),
         }
     }
 
     fn neighbors(&self) -> Vec<PositionNode> {
-        Direction::iterator().map(|x| self.apply_direction(x)).collect::<Vec<_>>()
+        Direction::iterator()
+            .map(|x| self.apply_direction(x))
+            .collect::<Vec<_>>()
     }
 }
 
@@ -130,7 +136,9 @@ impl Ord for PositionNode {
         // Notice that the we flip the ordering on costs.
         // In case of a tie we compare positions - this step is necessary
         // to make implementations of `PartialEq` and `Ord` consistent.
-        other.cost.cmp(&self.cost)
+        other
+            .cost
+            .cmp(&self.cost)
             .then_with(|| self.position.cmp(&other.position))
     }
 }
@@ -140,7 +148,6 @@ impl PartialOrd for PositionNode {
         Some(self.cmp(other))
     }
 }
-
 
 enum RoutingError {
     InvalidStartPosition,
@@ -159,7 +166,6 @@ struct RobotMap {
     oxygen_position: Option<Position>,
     annotations: HashMap<Position, char>,
 }
-
 
 impl RobotMap {
     fn new() -> RobotMap {
@@ -190,7 +196,7 @@ impl RobotMap {
         self.tiles.insert(position, value.clone());
         if value == Tile::Oxygen {
             self.oxygen_position = Some(position);
-        } 
+        }
         self.frontier.remove(&position);
         if value != Tile::Wall {
             for neighbor in position.neighbors() {
@@ -205,20 +211,10 @@ impl RobotMap {
             for x in (self.min_x - 2)..(self.max_x + 2) {
                 let pos = Position::new(x, y);
                 if self.annotations.contains_key(&pos) {
-                    output.push(
-                        *self.annotations
-                            .get(&pos)
-                            .unwrap(),
-                    );
+                    output.push(*self.annotations.get(&pos).unwrap());
                 } else {
-                    output.push(
-                        self.tiles
-                            .get(&pos)
-                            .unwrap_or(&Tile::Empty)
-                            .render(),
-                    );
+                    output.push(self.tiles.get(&pos).unwrap_or(&Tile::Empty).render());
                 }
-                
             }
             output.push('\n');
         }
@@ -235,7 +231,7 @@ impl RobotMap {
                 closest_position = Some(*frontier_position);
             }
         }
-        
+
         closest_position
     }
 
@@ -246,7 +242,9 @@ impl RobotMap {
         if self.tiles.get(&start).unwrap_or(&Tile::Wall) == &Tile::Wall {
             return Err(RoutingError::InvalidStartPosition);
         }
-        if self.tiles.get(&end).unwrap_or(&Tile::Empty) == &Tile::Wall && !self.frontier.contains(&end) {
+        if self.tiles.get(&end).unwrap_or(&Tile::Empty) == &Tile::Wall
+            && !self.frontier.contains(&end)
+        {
             return Err(RoutingError::InvalidEndPosition);
         }
         let mut visited_positions = HashSet::new();
@@ -262,7 +260,10 @@ impl RobotMap {
                     continue;
                 }
                 let tile = self.tiles.get(&neighbor.position).unwrap_or(&Tile::Empty);
-                if tile != &Tile::Wall && (tile != &Tile::Empty || (self.frontier.contains(&neighbor.position) && neighbor.position == end)) {
+                if tile != &Tile::Wall
+                    && (tile != &Tile::Empty
+                        || (self.frontier.contains(&neighbor.position) && neighbor.position == end))
+                {
                     frontier.push(neighbor.clone());
                 }
             }
@@ -271,11 +272,17 @@ impl RobotMap {
         Err(RoutingError::NoPathFound)
     }
 
-    fn annotate_route(&mut self, route: &Route, starting_position: &Position, current_position: &Position) {
+    fn annotate_route(
+        &mut self,
+        route: &Route,
+        starting_position: &Position,
+        current_position: &Position,
+    ) {
         let mut position = starting_position.clone();
         self.annotations.clear();
         for direction in route.clone().directions {
-            self.annotations.insert(position.clone(), direction.as_char());
+            self.annotations
+                .insert(position.clone(), direction.as_char());
             position = position + direction.as_position();
         }
         self.annotations.insert(position, 'G');
@@ -332,19 +339,19 @@ impl RobotEnvironment {
                 // Hit a wall, could not move
                 self.map.put(new_position, Tile::Wall);
                 false
-            },
+            }
             Some(1) => {
                 // Moved
                 self.map.put(new_position, Tile::Floor);
                 self.robot_position = new_position;
                 true
-            },
+            }
             Some(2) => {
-                 // Moved, found oxygen system
-                 self.map.put(new_position, Tile::Oxygen);
-                 self.robot_position = new_position;
-                 true
-            },
+                // Moved, found oxygen system
+                self.map.put(new_position, Tile::Oxygen);
+                self.robot_position = new_position;
+                true
+            }
             _ => panic!("Unexpected response code {:?}", response_code),
         }
     }
@@ -355,7 +362,8 @@ impl RobotEnvironment {
         for direction in &route.directions {
             if failed_previous_move {
                 println!("{}", self.map.render());
-                self.map.annotate_route(&route, &initial_position, &self.robot_position);
+                self.map
+                    .annotate_route(&route, &initial_position, &self.robot_position);
                 panic!("Attempting to move along a route, but a middle step failed.\nInitial position: {:?}\nCurrent position{:?}\nRoute {:?}\nMap: {}", initial_position, self.robot_position, route, self.map.render());
             }
             failed_previous_move = !self.attempt_movement(direction);
@@ -364,13 +372,22 @@ impl RobotEnvironment {
 
     fn explore(&mut self) {
         while let Some(frontier_position) = self.map.get_nearest_frontier(self.robot_position) {
-            let route = self.map.find_route(self.robot_position, frontier_position).ok().unwrap();
+            let route = self
+                .map
+                .find_route(self.robot_position, frontier_position)
+                .ok()
+                .unwrap();
             self.attempt_route(route);
         }
     }
 
     fn get_shorted_path_length_to_oxygen(&self) -> Option<usize> {
-        Some(self.map.find_route(Position::new(0, 0), self.map.oxygen_position?).ok()?.len())
+        Some(
+            self.map
+                .find_route(Position::new(0, 0), self.map.oxygen_position?)
+                .ok()?
+                .len(),
+        )
     }
 
     fn get_oxygen_fill_time(&self) -> Option<usize> {
@@ -378,17 +395,26 @@ impl RobotEnvironment {
     }
 }
 
-
 fn part1(content: &String) {
     let mut robot_environment = RobotEnvironment::new(content);
     robot_environment.explore();
-    println!("Part 1: Shortest route to oxygen system is {}", robot_environment.get_shorted_path_length_to_oxygen().unwrap_or(usize::MAX));
+    println!(
+        "Part 1: Shortest route to oxygen system is {}",
+        robot_environment
+            .get_shorted_path_length_to_oxygen()
+            .unwrap_or(usize::MAX)
+    );
 }
 
 fn part2(content: &String) {
     let mut robot_environment = RobotEnvironment::new(content);
     robot_environment.explore();
-    println!("Part 2: Time taken to fill with oxygen is {} minutes", robot_environment.get_oxygen_fill_time().unwrap_or(usize::MAX));
+    println!(
+        "Part 2: Time taken to fill with oxygen is {} minutes",
+        robot_environment
+            .get_oxygen_fill_time()
+            .unwrap_or(usize::MAX)
+    );
 }
 
 pub fn execute() {

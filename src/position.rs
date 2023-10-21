@@ -1,6 +1,6 @@
+use std::cmp::Ordering;
 use std::ops::Add;
 use std::ops::Sub;
-use std::cmp::Ordering;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub struct Position {
@@ -14,7 +14,12 @@ impl Position {
     }
 
     pub fn neighbors(&self) -> [Position; 4] {
-        [*self + Position::new(-1, 0), *self + Position::new(1, 0), *self + Position::new(0, -1), *self + Position::new(0, 1)]
+        [
+            *self + Position::new(-1, 0),
+            *self + Position::new(1, 0),
+            *self + Position::new(0, -1),
+            *self + Position::new(0, 1),
+        ]
     }
 
     fn manhattan_magnitude(self) -> u64 {
@@ -50,8 +55,7 @@ impl Sub for Position {
 
 impl Ord for Position {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.x.cmp(&self.x)
-            .then_with(|| self.y.cmp(&other.y))
+        other.x.cmp(&self.x).then_with(|| self.y.cmp(&other.y))
     }
 }
 

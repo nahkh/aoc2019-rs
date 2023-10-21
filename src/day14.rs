@@ -1,12 +1,12 @@
 use crate::input_files::read_content;
-use std::collections::HashMap;
 use regex::Regex;
+use std::collections::HashMap;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone)]
 enum Material {
     Ore,
     Fuel,
-    Intermediate(String)
+    Intermediate(String),
 }
 
 impl Material {
@@ -43,7 +43,7 @@ impl Reaction {
         let matched = re.captures(main_parts.get(1)?)?;
         let count = matched[1].parse::<u64>().ok()?;
         let material = Material::parse(&matched[2].to_string());
-        
+
         Some(Reaction {
             inputs: inputs,
             output: material,
@@ -69,14 +69,19 @@ impl Nanofactory {
         let mut ranks = HashMap::new();
         ranks.insert(Material::Ore, 0);
 
-        fn determine_rank(material: &Material, recipes: &HashMap<Material, Reaction>, ranks: &mut HashMap<Material, u64>) -> u64 {
+        fn determine_rank(
+            material: &Material,
+            recipes: &HashMap<Material, Reaction>,
+            ranks: &mut HashMap<Material, u64>,
+        ) -> u64 {
             if ranks.contains_key(material) {
                 return *ranks.get(material).unwrap();
             }
             let recipe = recipes.get(material).unwrap();
             let mut max_precursor_rank = 0;
             for precursor_material in recipe.inputs.clone().keys() {
-                max_precursor_rank = max_precursor_rank.max(determine_rank(precursor_material, recipes, ranks));
+                max_precursor_rank =
+                    max_precursor_rank.max(determine_rank(precursor_material, recipes, ranks));
             }
             ranks.insert(material.clone(), max_precursor_rank + 1);
             return max_precursor_rank + 1;
@@ -84,10 +89,7 @@ impl Nanofactory {
 
         determine_rank(&Material::Fuel, &recipes, &mut ranks);
 
-        Some(Nanofactory {
-            recipes,
-            ranks,
-        })
+        Some(Nanofactory { recipes, ranks })
     }
 
     fn find_highest_rank_material(&self, materials: &HashMap<Material, u64>) -> Option<Material> {
@@ -100,7 +102,7 @@ impl Nanofactory {
                 highest_rank = *rank;
             }
         }
-        
+
         highest_rank_material
     }
 
@@ -119,9 +121,14 @@ impl Nanofactory {
             let amount_needed = needed_materials.get(&material).unwrap();
             if amount_needed > &0 {
                 let reaction = self.recipes.get(&material).unwrap();
-                let reaction_multiplier = (amount_needed + reaction.output_multiplier - 1) / reaction.output_multiplier;
+                let reaction_multiplier =
+                    (amount_needed + reaction.output_multiplier - 1) / reaction.output_multiplier;
                 for (input_material, input_amount) in reaction.inputs.iter() {
-                    needed_materials.insert(input_material.clone(), needed_materials.get(&input_material).unwrap_or(&0) + input_amount * reaction_multiplier);
+                    needed_materials.insert(
+                        input_material.clone(),
+                        needed_materials.get(&input_material).unwrap_or(&0)
+                            + input_amount * reaction_multiplier,
+                    );
                 }
             }
             needed_materials.remove(&material);
@@ -149,7 +156,8 @@ impl Nanofactory {
             }
         }
         loop {
-            actually_needed_ore = self.calculate_ore_needed_for(&Material::Fuel, best_confirmed_guess + 1);
+            actually_needed_ore =
+                self.calculate_ore_needed_for(&Material::Fuel, best_confirmed_guess + 1);
             if actually_needed_ore <= max_ore {
                 best_confirmed_guess = best_confirmed_guess + 1;
             } else {
@@ -161,12 +169,18 @@ impl Nanofactory {
 
 fn part1(recipe_description: &String) {
     let factory = Nanofactory::new(recipe_description).unwrap();
-    println!("Part 1: {} ore needed", factory.calculate_ore_needed_for_1_fuel());
+    println!(
+        "Part 1: {} ore needed",
+        factory.calculate_ore_needed_for_1_fuel()
+    );
 }
 
 fn part2(recipe_description: &String) {
     let factory = Nanofactory::new(recipe_description).unwrap();
-    println!("Part 2: {} fuel produced with one trillion ore", factory.calculate_maximum_fuel_for_1_trillion_ore());
+    println!(
+        "Part 2: {} fuel produced with one trillion ore",
+        factory.calculate_maximum_fuel_for_1_trillion_ore()
+    );
 }
 
 pub fn execute() {
@@ -175,13 +189,13 @@ pub fn execute() {
     part2(&content);
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::day14::*;
 
-    fn factory1() -> Nanofactory{
-        Nanofactory::new(&"157 ORE => 5 NZVS
+    fn factory1() -> Nanofactory {
+        Nanofactory::new(
+            &"157 ORE => 5 NZVS
         165 ORE => 6 DCFZ
         44 XJWVT, 5 KHKGT, 1 QDVJ, 29 NZVS, 9 GPVTF, 48 HKGWZ => 1 FUEL
         12 HKGWZ, 1 GPVTF, 8 PSHF => 9 QDVJ
@@ -189,11 +203,15 @@ mod tests {
         177 ORE => 5 HKGWZ
         7 DCFZ, 7 PSHF => 2 XJWVT
         165 ORE => 2 GPVTF
-        3 DCFZ, 7 NZVS, 5 HKGWZ, 10 PSHF => 8 KHKGT".to_string()).unwrap()
+        3 DCFZ, 7 NZVS, 5 HKGWZ, 10 PSHF => 8 KHKGT"
+                .to_string(),
+        )
+        .unwrap()
     }
 
-    fn factory2() -> Nanofactory{
-        Nanofactory::new(&"2 VPVL, 7 FWMGM, 2 CXFTF, 11 MNCFX => 1 STKFG
+    fn factory2() -> Nanofactory {
+        Nanofactory::new(
+            &"2 VPVL, 7 FWMGM, 2 CXFTF, 11 MNCFX => 1 STKFG
         17 NVRVD, 3 JNWZP => 8 VPVL
         53 STKFG, 6 MNCFX, 46 VJHF, 81 HVMC, 68 CXFTF, 25 GNMV => 1 FUEL
         22 VJHF, 37 MNCFX => 5 FWMGM
@@ -204,11 +222,15 @@ mod tests {
         145 ORE => 6 MNCFX
         1 NVRVD => 8 CXFTF
         1 VJHF, 6 MNCFX => 4 RFSQX
-        176 ORE => 6 VJHF".to_string()).unwrap()
+        176 ORE => 6 VJHF"
+                .to_string(),
+        )
+        .unwrap()
     }
 
-    fn factory3() -> Nanofactory{
-        Nanofactory::new(&"171 ORE => 8 CNZTR
+    fn factory3() -> Nanofactory {
+        Nanofactory::new(
+            &"171 ORE => 8 CNZTR
         7 ZLQW, 3 BMBT, 9 XCVML, 26 XMNCP, 1 WPTQ, 2 MZWV, 1 RJRHP => 4 PLWSL
         114 ORE => 4 BHXH
         14 VRPVC => 6 BMBT
@@ -224,7 +246,10 @@ mod tests {
         3 BHXH, 2 VRPVC => 7 MZWV
         121 ORE => 7 VRPVC
         7 XCVML => 6 RJRHP
-        5 BHXH, 4 VRPVC => 5 LTCX".to_string()).unwrap()
+        5 BHXH, 4 VRPVC => 5 LTCX"
+                .to_string(),
+        )
+        .unwrap()
     }
 
     #[test]
@@ -236,8 +261,17 @@ mod tests {
 
     #[test]
     fn test_calculate_fuel_from_1_trillion_ore() {
-        assert_eq!(factory1().calculate_maximum_fuel_for_1_trillion_ore(), 82892753);
-        assert_eq!(factory2().calculate_maximum_fuel_for_1_trillion_ore(), 5586022);
-        assert_eq!(factory3().calculate_maximum_fuel_for_1_trillion_ore(), 460664);
+        assert_eq!(
+            factory1().calculate_maximum_fuel_for_1_trillion_ore(),
+            82892753
+        );
+        assert_eq!(
+            factory2().calculate_maximum_fuel_for_1_trillion_ore(),
+            5586022
+        );
+        assert_eq!(
+            factory3().calculate_maximum_fuel_for_1_trillion_ore(),
+            460664
+        );
     }
 }

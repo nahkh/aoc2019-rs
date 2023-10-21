@@ -1,8 +1,7 @@
-use crate::position::Position;
-use crate::intcode::IntCodeComputer;
 use crate::input_files::read_content;
+use crate::intcode::IntCodeComputer;
+use crate::position::Position;
 use std::collections::HashMap;
-
 
 #[derive(PartialEq, Clone, Copy)]
 enum Tile {
@@ -106,7 +105,6 @@ impl Display {
     }
 }
 
-
 #[derive(Clone)]
 struct ArcadeCabinet {
     display: Display,
@@ -141,7 +139,10 @@ impl ArcadeCabinet {
             if x == -1 && y == 0 {
                 self.score = tile_id as u64;
             } else {
-                self.display.put(Position::new(x as i32, y as i32), Tile::from_intcode(tile_id));
+                self.display.put(
+                    Position::new(x as i32, y as i32),
+                    Tile::from_intcode(tile_id),
+                );
             }
         }
         self.read_output = self.computer.get_output_size();
